@@ -1,0 +1,211 @@
+/* Global Styles - Marathon Copilot */
+page {
+  background-color: #F0F2F5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 28rpx;
+  color: #333333;
+  box-sizing: border-box;
+  --primary: #E94560;
+  --primary-dark: #C73E54;
+  --secondary: #1A1A2E;
+  --accent: #16213E;
+  --success: #27AE60;
+  --warning: #F39C12;
+  --danger: #E74C3C;
+  --info: #3498DB;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-hint: #999999;
+  --bg-primary: #F0F2F5;
+  --bg-card: #FFFFFF;
+  --border: #E8E8E8;
+  --shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+}
+
+.container {
+  padding: 24rpx;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16rpx;
+}
+
+.card-subtitle {
+  font-size: 24rpx;
+  color: var(--text-hint);
+  margin-bottom: 24rpx;
+}
+
+.section-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--secondary);
+  margin-bottom: 24rpx;
+  padding-left: 16rpx;
+  border-left: 6rpx solid var(--primary);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12rpx;
+  padding: 24rpx 48rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.btn-primary::after {
+  border: none;
+}
+
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--primary);
+  border: 2rpx solid var(--primary);
+  border-radius: 12rpx;
+  padding: 24rpx 48rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.btn-secondary::after {
+  border: none;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+}
+
+.tag-success { background: rgba(39, 174, 96, 0.1); color: var(--success); }
+.tag-warning { background: rgba(243, 156, 18, 0.1); color: var(--warning); }
+.tag-danger { background: rgba(231, 76, 60, 0.1); color: var(--danger); }
+.tag-info { background: rgba(52, 152, 219, 0.1); color: var(--info); }
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid var(--border);
+}
+
+.stat-row:last-child { border-bottom: none; }
+.stat-label { font-size: 26rpx; color: var(--text-secondary); }
+.stat-value { font-size: 28rpx; font-weight: 600; color: var(--text-primary); }
+
+.form-group { margin-bottom: 32rpx; }
+
+.form-label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 12rpx;
+  display: block;
+}
+
+.form-label .required { color: var(--danger); margin-left: 4rpx; }
+
+.form-input {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 24rpx;
+  background: #F8F9FA;
+  border: 2rpx solid var(--border);
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.form-input-focus { border-color: var(--primary); background: #FFFFFF; }
+
+.form-textarea {
+  width: 100%;
+  min-height: 160rpx;
+  padding: 20rpx 24rpx;
+  background: #F8F9FA;
+  border: 2rpx solid var(--border);
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.form-hint { font-size: 22rpx; color: var(--text-hint); margin-top: 8rpx; }
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+}
+
+.loading-text { font-size: 26rpx; color: var(--text-hint); margin-top: 20rpx; }
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 48rpx;
+}
+
+.empty-text { font-size: 30rpx; color: var(--text-hint); text-align: center; }
+.empty-action { margin-top: 32rpx; }
+
+/* Report rendering */
+.report-content { padding: 24rpx; line-height: 1.8; }
+.report-content .h1 { font-size: 40rpx; font-weight: 700; color: var(--secondary); margin: 32rpx 0 16rpx; padding-bottom: 12rpx; border-bottom: 2rpx solid var(--border); }
+.report-content .h2 { font-size: 34rpx; font-weight: 600; color: var(--secondary); margin: 28rpx 0 12rpx; padding-left: 16rpx; border-left: 6rpx solid var(--primary); }
+.report-content .h3 { font-size: 30rpx; font-weight: 600; color: var(--text-primary); margin: 24rpx 0 8rpx; }
+.report-content .paragraph { font-size: 28rpx; color: var(--text-primary); margin-bottom: 16rpx; line-height: 1.8; }
+
+.report-content .table-wrapper { overflow-x: auto; margin: 16rpx 0; }
+.report-content .table { width: 100%; border-collapse: collapse; font-size: 24rpx; }
+.report-content .table .th { background: var(--secondary); color: #FFFFFF; padding: 16rpx 12rpx; text-align: left; font-weight: 600; }
+.report-content .table .td { padding: 12rpx; border-bottom: 1rpx solid var(--border); }
+.report-content .table .tr-even { background: #F8F9FA; }
+
+.report-content .blockquote { padding: 16rpx 24rpx; margin: 16rpx 0; border-left: 6rpx solid var(--info); background: rgba(52, 152, 219, 0.05); border-radius: 0 8rpx 8rpx 0; }
+.report-content .blockquote-warning { border-left-color: var(--warning); background: rgba(243, 156, 18, 0.05); }
+.report-content .blockquote-danger { border-left-color: var(--danger); background: rgba(231, 76, 60, 0.05); }
+
+.report-content .code-block { background: #1E1E1E; color: #D4D4D4; padding: 20rpx 24rpx; border-radius: 8rpx; font-size: 24rpx; font-family: 'Menlo', 'Courier New', monospace; overflow-x: auto; margin: 16rpx 0; }
+
+/* Progress bar */
+.progress-bar { height: 12rpx; background: #E8E8E8; border-radius: 6rpx; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 6rpx; transition: width 0.5s ease; }
+.progress-fill-success { background: var(--success); }
+.progress-fill-warning { background: var(--warning); }
+.progress-fill-danger { background: var(--danger); }
+.progress-fill-primary { background: var(--primary); }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in { animation: fadeIn 0.3s ease-out; }

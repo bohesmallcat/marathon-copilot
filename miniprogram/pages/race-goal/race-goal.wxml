@@ -1,0 +1,209 @@
+<view class="container">
+  <!-- Step Indicator -->
+  <view class="steps">
+    <view class="step {{step >= 1 ? 'step-active' : ''}}">
+      <view class="step-num">1</view>
+      <text class="step-label">赛事</text>
+    </view>
+    <view class="step-line {{step >= 2 ? 'step-line-active' : ''}}"></view>
+    <view class="step {{step >= 2 ? 'step-active' : ''}}">
+      <view class="step-num">2</view>
+      <text class="step-label">天气</text>
+    </view>
+    <view class="step-line {{step >= 3 ? 'step-line-active' : ''}}"></view>
+    <view class="step {{step >= 3 ? 'step-active' : ''}}">
+      <view class="step-num">3</view>
+      <text class="step-label">HRV</text>
+    </view>
+    <view class="step-line {{step >= 5 ? 'step-line-active' : ''}}"></view>
+    <view class="step {{step >= 5 ? 'step-active' : ''}}">
+      <view class="step-num">4</view>
+      <text class="step-label">报告</text>
+    </view>
+  </view>
+
+  <!-- Step 1: 赛事信息 -->
+  <view wx:if="{{step === 1}}">
+    <view class="card">
+      <view class="card-title">赛事信息</view>
+
+      <view class="form-group">
+        <text class="form-label">赛事名称 <text class="required">*</text></text>
+        <input class="form-input" placeholder="如：无锡马拉松" value="{{raceName}}" bindinput="onInput" data-field="raceName" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">比赛日期</text>
+        <picker mode="date" value="{{raceDate}}" bindchange="onDateChange">
+          <view class="form-input picker-display">{{raceDate || '选择日期'}}</view>
+        </picker>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">比赛类型</text>
+        <picker range="{{distanceOptions}}" value="{{distanceIndex}}" bindchange="onPickerChange" data-field="distanceIndex">
+          <view class="form-input picker-display">{{distanceOptions[distanceIndex]}}</view>
+        </picker>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">目标完赛时间 <text class="required">*</text></text>
+        <input class="form-input" placeholder="如 1:33:00 或 3:15:00" value="{{targetTime}}" bindinput="onInput" data-field="targetTime" />
+        <text class="form-hint">格式：H:MM:SS（全马）或 M:SS / H:MM:SS（半马）</text>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">起跑时间</text>
+        <input class="form-input" placeholder="如 07:30" value="{{startTime}}" bindinput="onInput" data-field="startTime" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">配速策略</text>
+        <picker range="{{strategyOptions}}" value="{{strategyIndex}}" bindchange="onPickerChange" data-field="strategyIndex">
+          <view class="form-input picker-display">{{strategyOptions[strategyIndex]}}</view>
+        </picker>
+      </view>
+
+      <view class="form-row">
+        <view class="form-group form-half">
+          <text class="form-label">折返点数量</text>
+          <input class="form-input" type="number" placeholder="0" value="{{turnaroundCount}}" bindinput="onInput" data-field="turnaroundCount" />
+        </view>
+        <view class="form-group form-half">
+          <text class="form-label">距上场比赛(天)</text>
+          <input class="form-input" type="number" placeholder="30" value="{{intervalDays}}" bindinput="onInput" data-field="intervalDays" />
+        </view>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">赛道特征描述</text>
+        <textarea class="form-textarea" placeholder="如：城区赛道，累计爬升50m，5km处有隧道..." value="{{courseDescription}}" bindinput="onInput" data-field="courseDescription" />
+      </view>
+    </view>
+
+    <button class="btn-primary" bindtap="nextStep">下一步：天气信息</button>
+  </view>
+
+  <!-- Step 2: 天气 -->
+  <view wx:if="{{step === 2}}">
+    <view class="card">
+      <view class="card-title">天气预报</view>
+      <view class="card-subtitle">填写比赛当天的天气预报，用于计算环境税</view>
+
+      <view class="form-group">
+        <text class="form-label">天气状况</text>
+        <input class="form-input" placeholder="晴/多云/阴/小雨" value="{{weatherCondition}}" bindinput="onInput" data-field="weatherCondition" />
+      </view>
+
+      <view class="form-row">
+        <view class="form-group form-half">
+          <text class="form-label">气温(°C)</text>
+          <input class="form-input" type="digit" placeholder="15" value="{{temperature}}" bindinput="onInput" data-field="temperature" />
+        </view>
+        <view class="form-group form-half">
+          <text class="form-label">湿度(%)</text>
+          <input class="form-input" type="number" placeholder="60" value="{{humidity}}" bindinput="onInput" data-field="humidity" />
+        </view>
+      </view>
+
+      <view class="form-row">
+        <view class="form-group form-half">
+          <text class="form-label">风速(mph)</text>
+          <input class="form-input" type="digit" placeholder="5" value="{{windSpeed}}" bindinput="onInput" data-field="windSpeed" />
+        </view>
+        <view class="form-group form-half">
+          <text class="form-label">风向</text>
+          <input class="form-input" placeholder="北/东北/..." value="{{windDirection}}" bindinput="onInput" data-field="windDirection" />
+        </view>
+      </view>
+    </view>
+
+    <view class="btn-row">
+      <button class="btn-secondary btn-half" bindtap="prevStep">上一步</button>
+      <button class="btn-primary btn-half" bindtap="nextStep">下一步</button>
+    </view>
+  </view>
+
+  <!-- Step 3: HRV -->
+  <view wx:if="{{step === 3}}">
+    <view class="card">
+      <view class="card-title">HRV 竞技状态</view>
+      <view class="card-subtitle">提供 HRV 数据可显著提升评估精度（选填）</view>
+
+      <view class="toggle-row" bindtap="toggleHRV">
+        <text>启用 HRV 分析</text>
+        <switch checked="{{useHRV}}" color="#E94560" />
+      </view>
+
+      <block wx:if="{{useHRV}}">
+        <view class="form-group">
+          <text class="form-label">赛前7天 HRV 均值(ms)</text>
+          <input class="form-input" type="digit" placeholder="如 55" value="{{sevenDayAvg}}" bindinput="onInput" data-field="sevenDayAvg" />
+        </view>
+
+        <view class="form-group">
+          <text class="form-label">赛前7天 HRV 标准差(ms)</text>
+          <input class="form-input" type="digit" placeholder="如 8" value="{{sevenDaySD}}" bindinput="onInput" data-field="sevenDaySD" />
+        </view>
+
+        <view class="form-group">
+          <text class="form-label">赛日晨起 HRV(ms)</text>
+          <input class="form-input" type="digit" placeholder="如无则留空" value="{{raceDayHRV}}" bindinput="onInput" data-field="raceDayHRV" />
+        </view>
+      </block>
+    </view>
+
+    <view class="btn-row">
+      <button class="btn-secondary btn-half" bindtap="prevStep">上一步</button>
+      <button class="btn-primary btn-half" bindtap="generate">生成报告</button>
+    </view>
+  </view>
+
+  <!-- Step 4: 生成中 -->
+  <view wx:if="{{step === 4}}" class="generating-container">
+    <view class="generating-animation">
+      <view class="pulse-dot"></view>
+    </view>
+    <view class="generating-title">AI 教练正在分析...</view>
+    <view class="generating-steps">
+      <view class="gen-step">VDOT 基准锚定</view>
+      <view class="gen-step">环境税精算</view>
+      <view class="gen-step">PB 概率评估</view>
+      <view class="gen-step">生成配速方案</view>
+    </view>
+    <view class="generating-hint">首次生成可能需要 30-60 秒</view>
+  </view>
+
+  <!-- Step 5: 结果 -->
+  <view wx:if="{{step === 5}}">
+    <!-- 核心数据卡片 -->
+    <view class="card result-hero" wx:if="{{preCalc}}">
+      <view class="result-odds">
+        <view class="odds-value">{{preCalc.pbOdds.odds}}%</view>
+        <view class="odds-label">PB 胜算</view>
+        <view class="odds-conf">{{preCalc.pbOdds.confidence}}</view>
+      </view>
+      <view class="result-stats">
+        <view class="stat-row">
+          <text class="stat-label">当前 VDOT</text>
+          <text class="stat-value">{{preCalc.currentVDOT}}</text>
+        </view>
+        <view class="stat-row">
+          <text class="stat-label">目标 VDOT</text>
+          <text class="stat-value">{{preCalc.targetVDOT}}</text>
+        </view>
+        <view class="stat-row">
+          <text class="stat-label">环境税</text>
+          <text class="stat-value">{{preCalc.envTax.total}}"</text>
+        </view>
+        <view class="stat-row" wx:if="{{preCalc.hrvResult.correction !== 1}}">
+          <text class="stat-label">HRV 修正</text>
+          <text class="stat-value">{{preCalc.hrvResult.correction}} ({{preCalc.hrvResult.assessment}})</text>
+        </view>
+      </view>
+    </view>
+
+    <button class="btn-primary" bindtap="viewFullReport">查看完整报告</button>
+    <button class="btn-secondary" style="margin-top: 16rpx;" open-type="share">分享报告</button>
+  </view>
+</view>

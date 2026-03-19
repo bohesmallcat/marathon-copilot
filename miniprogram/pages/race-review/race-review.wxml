@@ -1,0 +1,181 @@
+<view class="container">
+  <!-- Steps -->
+  <view class="steps">
+    <view class="step {{step >= 1 ? 'step-active' : ''}}"><view class="step-num">1</view><text class="step-label">赛前方案</text></view>
+    <view class="step-line {{step >= 2 ? 'step-line-active' : ''}}"></view>
+    <view class="step {{step >= 2 ? 'step-active' : ''}}"><view class="step-num">2</view><text class="step-label">赛后数据</text></view>
+    <view class="step-line {{step >= 4 ? 'step-line-active' : ''}}"></view>
+    <view class="step {{step >= 4 ? 'step-active' : ''}}"><view class="step-num">3</view><text class="step-label">报告</text></view>
+  </view>
+
+  <!-- Step 1: 赛前方案 -->
+  <view wx:if="{{step === 1}}">
+    <view class="card">
+      <view class="card-title">赛前方案数据</view>
+      <view class="card-subtitle">填写赛前设定的目标，用于对比分析</view>
+
+      <view class="form-group">
+        <text class="form-label">赛事名称 <text class="required">*</text></text>
+        <input class="form-input" placeholder="如：上海半程马拉松" value="{{raceName}}" bindinput="onInput" data-field="raceName" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">比赛类型</text>
+        <picker range="{{distanceOptions}}" value="{{distanceIndex}}" bindchange="onPickerChange" data-field="distanceIndex">
+          <view class="form-input picker-display">{{distanceOptions[distanceIndex]}}</view>
+        </picker>
+      </view>
+
+      <view class="form-row">
+        <view class="form-group form-half">
+          <text class="form-label">目标时间</text>
+          <input class="form-input" placeholder="1:33:00" value="{{targetTime}}" bindinput="onInput" data-field="targetTime" />
+        </view>
+        <view class="form-group form-half">
+          <text class="form-label">目标配速</text>
+          <input class="form-input" placeholder="4'24\"/km" value="{{targetPace}}" bindinput="onInput" data-field="targetPace" />
+        </view>
+      </view>
+
+      <view class="form-row">
+        <view class="form-group form-half">
+          <text class="form-label">赛前PB胜算(%)</text>
+          <input class="form-input" type="number" placeholder="72" value="{{pbOdds}}" bindinput="onInput" data-field="pbOdds" />
+        </view>
+        <view class="form-group form-half">
+          <text class="form-label">预估环境税(秒)</text>
+          <input class="form-input" type="number" placeholder="30" value="{{envTaxSeconds}}" bindinput="onInput" data-field="envTaxSeconds" />
+        </view>
+      </view>
+    </view>
+    <button class="btn-primary" bindtap="nextStep">下一步：赛后数据</button>
+  </view>
+
+  <!-- Step 2: 赛后数据 -->
+  <view wx:if="{{step === 2}}">
+    <view class="card">
+      <view class="card-title">赛后实际数据</view>
+
+      <view class="form-group">
+        <text class="form-label">完赛时间 <text class="required">*</text></text>
+        <input class="form-input" placeholder="如 1:36:03" value="{{finishTime}}" bindinput="onInput" data-field="finishTime" />
+      </view>
+
+      <view class="form-row">
+        <view class="form-group form-half">
+          <text class="form-label">平均配速</text>
+          <input class="form-input" placeholder="4'33\"/km" value="{{avgPace}}" bindinput="onInput" data-field="avgPace" />
+        </view>
+        <view class="form-group form-half">
+          <text class="form-label">GPS距离(km)</text>
+          <input class="form-input" type="digit" placeholder="21.25" value="{{gpsDistance}}" bindinput="onInput" data-field="gpsDistance" />
+        </view>
+      </view>
+
+      <view class="form-row">
+        <view class="form-group form-half">
+          <text class="form-label">平均心率(bpm)</text>
+          <input class="form-input" type="number" placeholder="170" value="{{avgHR}}" bindinput="onInput" data-field="avgHR" />
+        </view>
+        <view class="form-group form-half">
+          <text class="form-label">最大心率(bpm)</text>
+          <input class="form-input" type="number" placeholder="185" value="{{maxHR}}" bindinput="onInput" data-field="maxHR" />
+        </view>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">步频(spm)</text>
+        <input class="form-input" type="number" placeholder="180" value="{{cadence}}" bindinput="onInput" data-field="cadence" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">分段数据</text>
+        <textarea class="form-textarea" placeholder="每5km或每公里的配速和心率数据" value="{{splits}}" bindinput="onInput" data-field="splits" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">体感反馈</text>
+        <textarea class="form-textarea" placeholder="各阶段的体感描述，如哪里开始感觉吃力..." value="{{feedback}}" bindinput="onInput" data-field="feedback" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">装备问题</text>
+        <input class="form-input" placeholder="如有血泡/磨损等" value="{{equipment}}" bindinput="onInput" data-field="equipment" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">伤病反馈</text>
+        <input class="form-input" placeholder="赛中/赛后伤病情况" value="{{injuryFeedback}}" bindinput="onInput" data-field="injuryFeedback" />
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-title">实际赛日天气</view>
+
+      <view class="form-row">
+        <view class="form-group form-half">
+          <text class="form-label">天气</text>
+          <input class="form-input" placeholder="晴/阴/雨" value="{{actualCondition}}" bindinput="onInput" data-field="actualCondition" />
+        </view>
+        <view class="form-group form-half">
+          <text class="form-label">气温(°C)</text>
+          <input class="form-input" type="digit" placeholder="12" value="{{actualTemp}}" bindinput="onInput" data-field="actualTemp" />
+        </view>
+      </view>
+
+      <view class="form-row">
+        <view class="form-group form-half">
+          <text class="form-label">湿度(%)</text>
+          <input class="form-input" type="number" placeholder="70" value="{{actualHumidity}}" bindinput="onInput" data-field="actualHumidity" />
+        </view>
+        <view class="form-group form-half">
+          <text class="form-label">风速(mph)</text>
+          <input class="form-input" type="digit" placeholder="5" value="{{actualWindSpeed}}" bindinput="onInput" data-field="actualWindSpeed" />
+        </view>
+      </view>
+    </view>
+
+    <view class="btn-row">
+      <button class="btn-secondary btn-half" bindtap="prevStep">上一步</button>
+      <button class="btn-primary btn-half" bindtap="generate">生成复盘报告</button>
+    </view>
+  </view>
+
+  <!-- Step 3: 生成中 -->
+  <view wx:if="{{step === 3}}" class="generating-container">
+    <view class="pulse-dot"></view>
+    <view class="generating-title">AI 教练正在复盘分析...</view>
+    <view class="generating-steps">
+      <view class="gen-step">核心指标对比</view>
+      <view class="gen-step">分段执行力分析</view>
+      <view class="gen-step">根因链追溯</view>
+      <view class="gen-step">偏差分解量化</view>
+    </view>
+    <view class="generating-hint">首次生成可能需要 30-60 秒</view>
+  </view>
+
+  <!-- Step 4: 结果 -->
+  <view wx:if="{{step === 4}}">
+    <view class="card result-hero" wx:if="{{preCalc}}">
+      <view class="deviation-display">
+        <view class="deviation-value {{preCalc.deviation > 0 ? 'deviation-slow' : 'deviation-fast'}}">
+          {{preCalc.deviation > 0 ? '+' : ''}}{{preCalc.deviation}}"
+        </view>
+        <view class="deviation-label">总偏差</view>
+      </view>
+      <view class="result-stats">
+        <view class="stat-row">
+          <text class="stat-label">实际 VDOT</text>
+          <text class="stat-value">{{preCalc.actualVDOT}}</text>
+        </view>
+        <view class="stat-row">
+          <text class="stat-label">实际环境税</text>
+          <text class="stat-value">{{preCalc.actualEnvTax.total}}"</text>
+        </view>
+      </view>
+    </view>
+
+    <button class="btn-primary" bindtap="viewFullReport">查看完整复盘报告</button>
+    <button class="btn-secondary" style="margin-top: 16rpx;" open-type="share">分享报告</button>
+  </view>
+</view>
