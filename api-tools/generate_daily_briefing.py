@@ -1050,20 +1050,163 @@ def _weekday_cn(d):
 
 
 # ---------------------------------------------------------------------------
+# PDF Generation (weasyprint)
+# ---------------------------------------------------------------------------
+def md_to_pdf(md_text, pdf_path):
+    """Convert Markdown text to styled PDF using weasyprint.
+
+    Reuses the design system from generate_pdf.py (dark header + orange accent).
+    """
+    try:
+        import markdown as _md
+        import re
+        from weasyprint import HTML as _HTML
+    except ImportError as exc:
+        print(f"[WARN] PDF dependency missing ({exc}), skipping PDF generation.")
+        return False
+
+    html_body = _md.markdown(md_text, extensions=["tables", "fenced_code", "nl2br"])
+
+    # -- post-process: classify blockquotes --------------------------------
+    def _classify_bq(match):
+        content = match.group(1)
+        if any(k in content for k in ["注意", "数据获取失败"]):
+            cls = "note-warning"
+        elif any(k in content for k in ["红灯", "必须降级", "危险"]):
+            cls = "note-danger"
+        elif any(k in content for k in ["本日报", "天气数据", "生成于"]):
+            cls = "note-meta"
+        else:
+            cls = "note-info"
+        return f'<blockquote class="{cls}">{content}</blockquote>'
+
+    html_body = re.sub(
+        r"<blockquote>(.*?)</blockquote>", _classify_bq, html_body, flags=re.DOTALL
+    )
+
+    # Wrap first h1 in title-banner
+    html_body = re.sub(
+        r"<h1>(.*?)</h1>",
+        r'<div class="title-banner"><h1>\1</h1></div>',
+        html_body,
+        count=1,
+    )
+
+    # Orange accent bars for <hr>
+    html_body = html_body.replace("<hr />", '<div class="accent-bar"></div>')
+    html_body = html_body.replace("<hr>", '<div class="accent-bar"></div>')
+
+    full_html = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8">
+<style>
+@page {{
+    size: A4;
+    margin: 1.8cm 2cm;
+    @bottom-center {{ content: counter(page); font-size: 9pt; color: #999; }}
+}}
+body {{
+    font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+    font-size: 10.5pt; line-height: 1.7; color: #1a1a1a; background: #fff;
+}}
+.title-banner {{
+    background: #2c3e50; color: #fff; padding: 18px 24px 14px;
+    margin: -10px -10px 20px; border-radius: 4px;
+}}
+.title-banner h1 {{
+    font-size: 18pt; font-weight: bold; color: #fff;
+    margin: 0; padding: 0; border: none; letter-spacing: 1px;
+}}
+h2 {{
+    font-size: 14pt; font-weight: bold; color: #2c3e50;
+    border-bottom: 2.5px solid #2c3e50; padding-bottom: 6px;
+    margin-top: 26px; margin-bottom: 12px;
+}}
+h3 {{
+    font-size: 12pt; font-weight: bold; color: #34495e;
+    margin-top: 20px; margin-bottom: 8px;
+    padding-left: 10px; border-left: 3.5px solid #e67e22;
+}}
+.accent-bar {{
+    height: 3px; background: linear-gradient(90deg, #e67e22, #f39c12);
+    border: none; margin: 24px 0; border-radius: 2px;
+}}
+table {{
+    border-collapse: collapse; width: 100%; margin: 12px 0 16px;
+    font-size: 9pt; border: none; border-radius: 4px; overflow: hidden;
+}}
+table tr:first-child {{ background: #2c3e50 !important; }}
+table tr:first-child th, table tr:first-child td {{
+    background: #2c3e50; color: #fff; font-weight: bold; border: none;
+}}
+th, td {{
+    padding: 7px 10px; border-bottom: 1px solid #e8e8e8;
+    text-align: left; vertical-align: top;
+}}
+tbody tr:nth-child(even), tr:nth-child(even) {{ background: #f8f9fa; }}
+tbody tr:nth-child(odd), tr:nth-child(odd)   {{ background: #fff; }}
+blockquote {{
+    margin: 14px 0; padding: 12px 16px; border-radius: 4px;
+    font-size: 10pt; line-height: 1.65; border-left: 4px solid;
+    page-break-inside: avoid;
+}}
+blockquote.note-info    {{ background: #e9f2f8; border-left-color: #3498db; color: #1a3a5c; }}
+blockquote.note-warning {{ background: #fdf2e8; border-left-color: #e67e22; color: #5a3510; }}
+blockquote.note-danger  {{ background: #fdedeb; border-left-color: #c0392b; color: #5a1a15; }}
+blockquote.note-meta    {{ background: #f5f5f5; border-left-color: #999; color: #666; font-size: 9pt; }}
+pre {{
+    background: #f0f3f6; border: 1px solid #dce1e6; border-radius: 4px;
+    padding: 14px 16px; font-family: "Consolas", "Monaco", monospace;
+    font-size: 9pt; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word;
+    color: #2c3e50;
+}}
+code {{
+    font-family: "Consolas", "Monaco", monospace; font-size: 9pt;
+    background: #f0f3f6; padding: 2px 5px; border-radius: 3px; color: #c0392b;
+}}
+pre code {{ background: none; padding: 0; color: #2c3e50; }}
+strong {{ color: #2c3e50; }}
+ul, ol {{ margin: 8px 0; padding-left: 24px; }}
+li {{ margin-bottom: 4px; line-height: 1.65; }}
+p {{ margin: 8px 0; line-height: 1.7; }}
+h2, h3 {{ page-break-after: avoid; }}
+table {{ page-break-inside: auto; }}
+tr {{ page-break-inside: avoid; }}
+</style></head>
+<body>{html_body}</body></html>"""
+
+    try:
+        _HTML(string=full_html).write_pdf(str(pdf_path))
+        size_kb = pdf_path.stat().st_size / 1024
+        print(f"[OK] PDF generated: {pdf_path} ({size_kb:.0f} KB)")
+        return True
+    except Exception as exc:
+        print(f"[WARN] PDF generation failed: {exc}")
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Save & Persistence
 # ---------------------------------------------------------------------------
 def save_report(report, today, days_to_race):
-    """Save report to both local and OneDrive directories."""
-    filename = f"薄荷猫猫_328_天气日报_D-{days_to_race}.md"
+    """Save report (Markdown + PDF) to both local and OneDrive directories."""
+    md_filename = f"薄荷猫猫_328_天气日报_D-{days_to_race}.md"
+    pdf_filename = f"薄荷猫猫_328_天气日报_D-{days_to_race}.pdf"
     saved_paths = []
 
     for output_dir in [ONEDRIVE_REPORTS, LOCAL_REPORTS]:
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
-            output_path = output_dir / filename
-            output_path.write_text(report, encoding="utf-8")
-            saved_paths.append(str(output_path))
-            print(f"[OK] Report saved to {output_path}")
+            # Save Markdown
+            md_path = output_dir / md_filename
+            md_path.write_text(report, encoding="utf-8")
+            saved_paths.append(str(md_path))
+            print(f"[OK] Markdown saved to {md_path}")
+
+            # Generate PDF
+            pdf_path = output_dir / pdf_filename
+            md_to_pdf(report, pdf_path)
+            saved_paths.append(str(pdf_path))
         except Exception as e:
             print(f"[WARN] Failed to save to {output_dir}: {e}")
 
