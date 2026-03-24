@@ -64,7 +64,9 @@ triggers:
 
 ## Step 2: 获取最新天气
 
-使用项目中的 `api-tools/daily_weather_report.py`（执行 `python3 api-tools/daily_weather_report.py --stdout`）获取最新天气数据。
+使用项目中的 `api-tools/generate_daily_briefing.py`（执行 `python3 api-tools/generate_daily_briefing.py --stdout`）获取最新天气 + 训练 + 饮食综合简报。配置文件位于 `api-tools/race_config.yaml`。
+
+旧版通用天气脚本 `api-tools/daily_weather_report.py`（`--stdout`）仍可作为备选数据源。
 
 如果脚本不可用或比赛城市不在脚本配置中，使用 `webfetch` 从以下来源获取：
 1. **wttr.in**：`https://wttr.in/<城市>?format=j1`（3 天精准预报）
@@ -323,7 +325,7 @@ UV/日晒: 后5km +1"/km (晴天 UV≥6)
 # 工作流程（执行时）
 
 1. **读取作战方案**：`read` 薄荷猫猫_328_苏河半马_作战方案.md，提取基准天气和环境税参数
-2. **获取天气**：`exec` python3 api-tools/daily_weather_report.py --stdout 或 `webfetch` wttr.in
+2. **获取天气**：`exec` python3 api-tools/generate_daily_briefing.py --stdout 或 `webfetch` wttr.in
 3. **对比分析**：逐项对比天气变化
 4. **环境税重算**：使用模型参数重新计算
 5. **影响评估**：判定阈值、储备利用率、方案有效性

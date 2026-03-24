@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-328 苏河半马 · 赛前每日天气 + 训练 + 饮食 自动化简报
+赛前每日天气 + 训练 + 饮食 自动化简报
 
 每日北京时间 08:00 自动运行，生成包含：
   1. 最新天气预报与环境税评估
@@ -9,10 +9,13 @@
   4. 恢复监控 checklist
   5. 配速方案确认 / 更新
 
+Configuration is loaded from race_config.yaml (single source of truth).
+
 Usage:
     python3 generate_daily_briefing.py                # 生成并保存
     python3 generate_daily_briefing.py --stdout        # 仅输出到终端
     python3 generate_daily_briefing.py --date 2026-03-25  # 指定日期生成
+    python3 generate_daily_briefing.py --config other.yaml  # 使用其他配置文件
 """
 
 import os
@@ -20,455 +23,179 @@ import sys
 import json
 import datetime
 import argparse
-import math
 from pathlib import Path
 
-try:
-    import requests
-except ImportError:
-    print("[ERROR] pip install requests")
-    sys.exit(1)
-
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-# ---------------------------------------------------------------------------
-# Constants & Race Config
-# ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).parent
-ONEDRIVE_REPORTS = Path(
-    "/mnt/c/Users/Danna_C/OneDrive - Dell Technologies/Documents/PB/api-tools/reports"
-)
-LOCAL_REPORTS = SCRIPT_DIR / "reports"
 
-RACE_DATE = datetime.date(2026, 3, 28)
-RACE_START_TIME = "07:00"
-RACE_CITY = "Shanghai"
-RACE_CITY_CN = "上海"
-RACE_NAME = "2026 上海苏州河半程马拉松"
-RACE_DISTANCE_KM = 21.0975
-RACE_GPS_DISTANCE_KM = 21.35  # actual GPS distance due to bends
+# ---------------------------------------------------------------------------
+# Load race_config.yaml → module-level constants
+# ---------------------------------------------------------------------------
+try:
+    import yaml
+except ImportError:
+    # Fallback: lightweight YAML-subset loader for simple key-value configs
+    # Only needed if PyYAML is not installed
+    yaml = None
 
-# Runner profile
-RUNNER = {
-    "name": "薄荷猫猫",
-    "weight_kg": 52,
-    "height_cm": 166,
-    "bsa": 1.57,
-    "body_correction": 0.90,
-    "pb": "1:33:56",
-    "pb_315": "1:36:03",
-    "tpace": "4'03\"",
-    "tpace_bpm": 176,
-    "reserve_per_km": 21,  # seconds
-    "plan_a": {"time": "1:33:00", "pace": "4'24\"/km", "gps_pace": "4'22\"/km"},
-    "plan_b": {"time": "1:33:50", "pace": "4'26\"/km", "gps_pace": "4'25\"/km"},
-    "plan_c": {"time": "1:35:00", "pace": "4'28\"/km", "gps_pace": "4'28\"/km"},
-}
 
-# Baseline weather (from battle plan, 3/16)
-BASELINE = {
-    "weather": "晴 (Sunny)",
-    "temp_start": 10.6,
-    "temp_end": 14.4,
-    "humidity": 44,
-    "wind_mph": 8,
-    "wind_kmh": 13,
-    "wind_dir": "北",
-    "rain_chance": 5,
-    "uv": 7,
-    "env_tax_total": 15,
-    "env_tax_wind": 2,
-    "env_tax_humidity": 0,
-    "env_tax_temp": 0,
-    "env_tax_uv": 5,
-    "env_tax_turnaround": 8,
-}
+def _load_config(config_path=None):
+    """Load race_config.yaml and return the parsed dict."""
+    if config_path is None:
+        config_path = SCRIPT_DIR / "race_config.yaml"
+    config_path = Path(config_path)
+    if not config_path.exists():
+        print(f"[ERROR] Config file not found: {config_path}")
+        sys.exit(1)
+    text = config_path.read_text(encoding="utf-8")
+    if yaml:
+        return yaml.safe_load(text)
+    # Minimal fallback: try json if someone converted it
+    try:
+        return json.loads(text)
+    except Exception:
+        print("[ERROR] pip install pyyaml  (needed to parse race_config.yaml)")
+        sys.exit(1)
 
-# Environment tax model
+
+# Will be populated in main() after argparse, but provide defaults for import
+CFG = None  # filled by _init_from_config()
+
+# Module-level aliases — populated by _init_from_config()
+RACE_DATE = None
+RACE_START_TIME = None
+RACE_CITY = None
+RACE_CITY_CN = None
+RACE_NAME = None
+RACE_DISTANCE_KM = None
+RACE_GPS_DISTANCE_KM = None
+RUNNER = None
+BASELINE = None
+TRAINING_PLANS = None
+DIET_PLANS = None
+RECOVERY_CHECKLIST = None
+ONEDRIVE_REPORTS = None
+LOCAL_REPORTS = None
+
+
+def _init_from_config(cfg):
+    """Populate module-level constants from parsed config dict."""
+    global CFG, RACE_DATE, RACE_START_TIME, RACE_CITY, RACE_CITY_CN, RACE_NAME
+    global RACE_DISTANCE_KM, RACE_GPS_DISTANCE_KM, RUNNER, BASELINE
+    global TRAINING_PLANS, DIET_PLANS, RECOVERY_CHECKLIST
+    global ONEDRIVE_REPORTS, LOCAL_REPORTS
+
+    CFG = cfg
+    race = cfg["race"]
+    RACE_DATE = datetime.date.fromisoformat(race["date"])
+    RACE_START_TIME = race["start_time"]
+    RACE_CITY = race["city"]
+    RACE_CITY_CN = race["city_cn"]
+    RACE_NAME = race["name"]
+    RACE_DISTANCE_KM = race["distance_km"]
+    RACE_GPS_DISTANCE_KM = race.get("gps_distance_km", RACE_DISTANCE_KM)
+
+    runner_cfg = cfg["runner"]
+    RUNNER = {
+        "name": runner_cfg["name"],
+        "weight_kg": runner_cfg["weight_kg"],
+        "height_cm": runner_cfg["height_cm"],
+        "bsa": runner_cfg["bsa"],
+        "body_correction": runner_cfg["body_correction"],
+        "pb": runner_cfg["pb"],
+        "pb_315": runner_cfg.get("pb_315", ""),
+        "tpace": runner_cfg["tpace"],
+        "tpace_bpm": runner_cfg["tpace_bpm"],
+        "reserve_per_km": runner_cfg["reserve_per_km"],
+        "plan_a": runner_cfg["plans"]["a"],
+        "plan_b": runner_cfg["plans"]["b"],
+        "plan_c": runner_cfg["plans"]["c"],
+    }
+
+    bl = cfg["baseline"]
+    BASELINE = {
+        "weather": bl["weather"],
+        "temp_start": bl["temp_start"],
+        "temp_end": bl["temp_end"],
+        "humidity": bl["humidity"],
+        "wind_mph": bl["wind_mph"],
+        "wind_kmh": bl["wind_kmh"],
+        "wind_dir": bl["wind_dir"],
+        "rain_chance": bl["rain_chance"],
+        "uv": bl["uv"],
+        "env_tax_total": bl["env_tax"]["total"],
+        "env_tax_wind": bl["env_tax"]["wind"],
+        "env_tax_humidity": bl["env_tax"]["humidity"],
+        "env_tax_temp": bl["env_tax"]["temp"],
+        "env_tax_uv": bl["env_tax"]["uv"],
+        "env_tax_turnaround": bl["env_tax"]["turnaround"],
+    }
+
+    # Training & diet plans — config keys are integers (D-N days)
+    TRAINING_PLANS = {int(k): v for k, v in cfg.get("training", {}).items()}
+    DIET_PLANS = {int(k): v for k, v in cfg.get("diet", {}).items()}
+    RECOVERY_CHECKLIST = cfg.get("recovery_checklist", {})
+
+    # Output paths (env vars override config)
+    paths = cfg.get("paths", {})
+    ONEDRIVE_REPORTS = Path(
+        os.environ.get("REPORTS_ONEDRIVE_DIR", paths.get("reports_onedrive", ""))
+    ) if paths.get("reports_onedrive") or os.environ.get("REPORTS_ONEDRIVE_DIR") else None
+    LOCAL_REPORTS = Path(
+        os.environ.get("REPORTS_DIR", paths.get("reports_local", "./reports"))
+    )
+    if not LOCAL_REPORTS.is_absolute():
+        LOCAL_REPORTS = SCRIPT_DIR / LOCAL_REPORTS
+
+    _init_model_constants()
+
+
+# ---------------------------------------------------------------------------
+# Shared modules (weather, env_tax, pdf)
+# ---------------------------------------------------------------------------
+from weather_client import fetch_weather, parse_hourly_for_race   # noqa: E402
+from env_tax import calc_env_tax as _calc_env_tax_core, assess_signal as _assess_signal_core  # noqa: E402
+
+
+def _get_env_tax_model():
+    """Return env tax model params from config."""
+    return CFG["env_tax_model"]
+
+
+def calc_env_tax(forecast):
+    """Calculate environment tax using shared module + config."""
+    return _calc_env_tax_core(
+        forecast,
+        model=_get_env_tax_model(),
+        runner=RUNNER,
+        is_full=CFG["race"].get("is_full", False),
+        distance_km=RACE_GPS_DISTANCE_KM,
+    )
+
+
+def assess_signal(env_tax_total, baseline_total=None):
+    """Determine green/yellow/orange/red light using config thresholds."""
+    if baseline_total is None:
+        baseline_total = BASELINE["env_tax_total"]
+    thresholds = CFG.get("signal", {"green": 10, "yellow": 30, "orange": 60})
+    return _assess_signal_core(env_tax_total, baseline_total, thresholds)
+
+
+# Convenience accessor for env tax model params used in report text.
+# These are populated by _init_from_config() alongside the other module-level vars.
 OPTIMAL_TEMP_LOW = 5
 OPTIMAL_TEMP_HIGH = 15
 HUMIDITY_DRIFT_THRESHOLD = 70
-WIND_PENALTY_PER_MPH = 0.5
-CROSSWIND_COEFF = 0.50
-URBAN_SHELTER_REDUCTION = 0.40  # 60% shelter -> 40% effective
 EXPOSED_KM = 3.5
-TURNAROUND_TAX = 8
-
-# ---------------------------------------------------------------------------
-# Training & Diet Plans (keyed by D-N)
-# ---------------------------------------------------------------------------
-TRAINING_PLANS = {
-    4: {  # D-4 = 3/24
-        "phase": "Taper 减量期",
-        "workout": "轻松跑",
-        "distance": "5km @ 5'30\"/km",
-        "rpe": "RPE 4",
-        "hr_cap": "< 145bpm",
-        "gear": "日常训练鞋",
-        "details": "维持跑感，Taper 减量期不追速。",
-        "post_run": [
-            "足弓强化训练（全量 5 动作 × 全组数，约 15 分钟）",
-            "泡沫轴放松 10min（小腿 + 大腿前侧）",
-            "血泡状态检查",
-        ],
-        "arch_training": "全量",
-    },
-    3: {  # D-3 = 3/25
-        "phase": "赛前激活",
-        "workout": "赛前开腿跑（醒腿）",
-        "distance": "5km 总量：2km 热身 + 4x200m @ 3'50\"-4'00\"（间歇慢跑 200m）+ 1.5km 放松",
-        "rpe": "RPE 5-6",
-        "hr_cap": "200m 间歇可至 170bpm",
-        "gear": "日常训练鞋",
-        "details": (
-            "赛前最后一次有速度的训练。200m 间歇调动快肌纤维，"
-            "速度快于比赛配速但距离极短，不产生疲劳。"
-        ),
-        "post_run": [
-            "足弓强化训练（全量 — 最后一次全量训练）",
-            "泡沫轴放松 10min",
-            "拉伸 15min",
-        ],
-        "arch_training": "全量（最后一次）",
-    },
-    2: {  # D-2 = 3/26
-        "phase": "Taper + 碳水负荷",
-        "workout": "完全休息（散步可）",
-        "distance": "0km",
-        "rpe": "—",
-        "hr_cap": "—",
-        "gear": "—",
-        "details": (
-            "赛前 2 天，完全休息让身体超量恢复。碳水负荷启动日，"
-            "全力吃碳水：白米饭、面条、面包、果汁。"
-        ),
-        "post_run": [
-            "足弓强化训练（减半，各 1 组即可）",
-            "轻度拉伸 10min",
-        ],
-        "arch_training": "减半（各 1 组）",
-    },
-    1: {  # D-1 = 3/27
-        "phase": "赛前最终准备",
-        "workout": "极轻松抖腿跑",
-        "distance": "2km @ 6'00\"/km + 2x100m 大步跑",
-        "rpe": "RPE 2-3",
-        "hr_cap": "< 135bpm (慢跑段)",
-        "gear": "日常训练鞋",
-        "details": (
-            "仅为保持跑感和神经激活。100m 大步跑感受一下身体弹性。"
-            "22:00 前入睡。"
-        ),
-        "post_run": [
-            "足弓强化训练（减半，各 1 组）",
-            "检查比赛装备清单：鞋子、号码布、手表充电、能量胶、帽子、足弓贴扎材料、凡士林、水泡贴、五趾袜",
-        ],
-        "arch_training": "减半（各 1 组）",
-        "extra": (
-            "**装备检查清单：**\n"
-            "- [ ] Alphafly 3（已测试确认）\n"
-            "- [ ] 号码布 + 安全别针\n"
-            "- [ ] 手表充电至 100%\n"
-            "- [ ] 能量胶 x2（10km + 赛前）\n"
-            "- [ ] 帽子/遮阳帽\n"
-            "- [ ] 足弓贴扎（Low-Dye taping）材料：肌贴/运动胶带\n"
-            "- [ ] 凡士林/Body Glide\n"
-            "- [ ] 水泡贴（Compeed）\n"
-            "- [ ] 五趾袜\n"
-            "- [ ] 短袖 + 短裤\n"
-            "- [ ] 赛后换洗衣物 + 一次性雨衣（赛后备用）\n"
-        ),
-    },
-    0: {  # D-Day = 3/28
-        "phase": "比赛日",
-        "workout": "2026 上海苏州河半程马拉松",
-        "distance": "21.0975km",
-        "rpe": "全力",
-        "hr_cap": "按配速表执行",
-        "gear": "Alphafly 3 + 足弓贴扎 + 凡士林 + 水泡贴 + 五趾袜",
-        "details": (
-            "04:30 起床 → 05:00 早餐 → 06:00 到达起点 → "
-            "06:30 热身慢跑 10min + 动态拉伸 → 06:50 进入出发区 → 07:00 起跑"
-        ),
-        "post_run": [],
-        "arch_training": "不做",
-    },
-}
-
-DIET_PLANS = {
-    4: {  # D-4
-        "phase": "正常训练期",
-        "carb_target": "260-312g（5-6g/kg）",
-        "protein_target": "62g（1.2g/kg）",
-        "water": "1.5-2L",
-        "meals": {
-            "早餐": "粥/面包 + 鸡蛋 + 牛奶（~60g 碳水 + 20g 蛋白）",
-            "午餐": "米饭 + 瘦肉/鱼 + 蔬菜（~100g 碳水 + 25g 蛋白）",
-            "训练前": "香蕉 1 根 或 能量棒（跑前 30min，~25g 碳水）",
-            "晚餐": "面条/米饭 + 蛋白质 + 蔬菜（~80g 碳水 + 20g 蛋白）",
-            "加餐": "水果/酸奶（按需）",
-        },
-        "notes": [
-            "不需要碳水负荷，保持正常饮食",
-            "避免尝试新食物",
-            "少油少辛辣，减少肠胃负担",
-        ],
-    },
-    3: {  # D-3
-        "phase": "正常训练期（最后一天）",
-        "carb_target": "260-312g（5-6g/kg）",
-        "protein_target": "62g（1.2g/kg）",
-        "water": "1.5-2L",
-        "meals": {
-            "早餐": "粥/面包 + 鸡蛋 + 牛奶（~60g 碳水 + 20g 蛋白）",
-            "午餐": "米饭 + 瘦肉/鱼 + 蔬菜（~100g 碳水 + 25g 蛋白）",
-            "训练后": "巧克力牛奶 300ml 或 香蕉 + 酸奶（30min 内，碳水:蛋白 3:1）",
-            "晚餐": "面条/米饭 + 蛋白质 + 蔬菜（~80g 碳水 + 20g 蛋白）",
-        },
-        "notes": [
-            "明天开始碳水负荷，今天正常吃",
-            "训练后及时补充碳水+蛋白，帮助恢复",
-            "保持清淡，避免肠胃不适",
-        ],
-    },
-    2: {  # D-2
-        "phase": "碳水负荷 Day 1",
-        "carb_target": "416-520g（8-10g/kg）",
-        "protein_target": "52g（1.0g/kg）",
-        "water": "2L+",
-        "meals": {
-            "早餐": "大碗白粥 + 馒头/面包 + 果酱 + 果汁（~120g 碳水）",
-            "午餐": "大碗米饭（300g+）+ 少量瘦肉 + 蔬菜（~150g 碳水）",
-            "下午加餐": "香蕉 2 根 + 运动饮料 500ml（~60g 碳水）",
-            "晚餐": "大碗面条/米饭 + 面包（~140g 碳水）",
-            "睡前": "果汁 200ml 或 蜂蜜水（~30g 碳水）",
-        },
-        "notes": [
-            "**碳水负荷启动！** 目标 416-520g 碳水/天",
-            "以米饭、面条、面包、果汁、香蕉为主",
-            "蛋白质适当降低，把胃的空间留给碳水",
-            "不要吃高脂肪食物（会占胃容量且不利于糖原合成）",
-            "少量多餐，避免单次吃太撑",
-            "如果感觉体重上升 0.5-1kg 是正常的（糖原 + 水分储存）",
-        ],
-    },
-    1: {  # D-1
-        "phase": "碳水负荷 Day 2",
-        "carb_target": "416-520g（8-10g/kg）",
-        "protein_target": "52g（1.0g/kg）",
-        "water": "2L+",
-        "meals": {
-            "早餐": "大碗白粥/面条 + 面包 + 果汁（~120g 碳水）",
-            "午餐": "大碗米饭（300g+）+ 少量瘦肉（~150g 碳水）",
-            "下午加餐": "香蕉 + 能量棒 + 运动饮料（~60g 碳水）",
-            "晚餐": "面条/米饭 + 面包（~130g 碳水）— **最晚 19:00 吃完**",
-            "睡前": "少量果汁（~30g 碳水）",
-        },
-        "notes": [
-            "碳水负荷第二天，继续高碳水饮食",
-            "**晚餐最晚 19:00 完成**，给消化系统充分时间",
-            "**22:00 前入睡**，保证 6+ 小时睡眠",
-            "晚餐不要吃太撑，避免影响睡眠",
-            "明早 04:30 起床，今晚早点准备好赛前早餐食材",
-        ],
-    },
-    0: {  # D-Day
-        "phase": "比赛日",
-        "carb_target": "120-150g（赛前早餐）",
-        "protein_target": "低",
-        "water": "300ml（早餐时）",
-        "meals": {
-            "04:30 早餐": "白米饭/面包 + 果酱（120-150g 碳水）— 复制 315 赛前餐",
-            "05:00": "100-150mg 咖啡因（1 杯浓缩咖啡）",
-            "06:50 赛前 10min": "能量胶 1 支（20-25g 碳水）+ 100ml 水",
-            "赛中 5km": "100ml 饮料，快速通过",
-            "赛中 10km": "150ml 运动饮料 + 能量胶 1 支 — **关键补给点**",
-            "赛中 12.5km": "100ml 水",
-            "赛中 15km": "150ml 饮料",
-            "赛中 17.5km": "100ml 水",
-            "赛中 20km": "跳过或小口 50ml",
-        },
-        "notes": [
-            "**严格复制 315 赛前餐 — 已验证无肠胃问题**",
-            "起床后立即喝 200ml 温水",
-            "不吃任何赛前没吃过的东西",
-        ],
-    },
-}
-
-# Recovery monitoring items
-RECOVERY_CHECKLIST = {
-    "晨脉": "起床后卧床测量，应回到基线 ± 3bpm",
-    "左脚踝": "0-10 疼痛量表，应为 0-2（无痛或微酸）",
-    "血泡": "目视检查，D+9 后应完全愈合",
-    "DOMS": "下楼梯/蹲起测试，应无明显酸痛",
-    "睡眠": "目标 7+ 小时，今晚 22:30 前入睡",
-}
 
 
-# ---------------------------------------------------------------------------
-# Weather Fetching
-# ---------------------------------------------------------------------------
-def fetch_weather_wttr(city="Shanghai"):
-    """Fetch weather from wttr.in."""
-    url = f"https://wttr.in/{city}?format=j1"
-    r = requests.get(url, timeout=30, verify=False)
-    r.raise_for_status()
-    return r.json()
-
-
-def parse_hourly_for_race(data):
-    """Extract race-relevant weather from wttr.in JSON."""
-    current = data["current_condition"][0]
-    result = {
-        "current": {
-            "temp_c": int(current["temp_C"]),
-            "feels_like_c": int(current["FeelsLikeC"]),
-            "humidity": int(current["humidity"]),
-            "pressure_hpa": int(current["pressure"]),
-            "wind_kmh": int(current["windspeedKmph"]),
-            "wind_mph": round(int(current["windspeedKmph"]) * 0.621371),
-            "wind_dir": current["winddir16Point"],
-            "desc": current["weatherDesc"][0]["value"],
-            "uv": int(current.get("uvIndex", 0)),
-        },
-        "forecasts": [],
-    }
-
-    for day_data in data.get("weather", []):
-        hourly = day_data["hourly"]
-        # Morning hours 6-9 for race relevance
-        morning = [h for h in hourly if int(h["time"]) in [600, 900]]
-        late_morning = [h for h in hourly if int(h["time"]) in [1200]]
-        # 7am slot
-        seven_am = [h for h in hourly if int(h["time"]) == 600]
-        nine_am = [h for h in hourly if int(h["time"]) == 900]
-
-        if morning:
-            avg_temp = sum(int(h["tempC"]) for h in morning) / len(morning)
-            avg_humidity = sum(int(h["humidity"]) for h in morning) / len(morning)
-            avg_wind_kmh = sum(int(h["windspeedKmph"]) for h in morning) / len(morning)
-        else:
-            avg_temp = (int(day_data["mintempC"]) + int(day_data["maxtempC"])) / 2
-            avg_humidity = 50
-            avg_wind_kmh = 10
-
-        start_temp = int(seven_am[0]["tempC"]) if seven_am else int(day_data["mintempC"])
-        start_humidity = int(seven_am[0]["humidity"]) if seven_am else int(avg_humidity)
-        finish_temp = int(nine_am[0]["tempC"]) if nine_am else int(day_data["maxtempC"])
-        finish_humidity = int(nine_am[0]["humidity"]) if nine_am else int(avg_humidity)
-
-        late_temp = int(late_morning[0]["tempC"]) if late_morning else int(day_data["maxtempC"])
-
-        rain_chances = [int(h.get("chanceofrain", 0)) for h in hourly]
-        morning_rain = max(int(h.get("chanceofrain", 0)) for h in morning) if morning else 0
-
-        uv_vals = [int(h.get("uvIndex", 0)) for h in hourly]
-        morning_uv = max(int(h.get("uvIndex", 0)) for h in morning) if morning else 0
-
-        fc = {
-            "date": day_data["date"],
-            "min_temp": int(day_data["mintempC"]),
-            "max_temp": int(day_data["maxtempC"]),
-            "start_temp": start_temp,
-            "finish_temp": finish_temp,
-            "avg_morning_temp": round(avg_temp, 1),
-            "late_morning_temp": late_temp,
-            "start_humidity": start_humidity,
-            "finish_humidity": finish_humidity,
-            "avg_morning_humidity": round(avg_humidity),
-            "morning_wind_kmh": round(avg_wind_kmh),
-            "morning_wind_mph": round(avg_wind_kmh * 0.621371),
-            "wind_dir": morning[0]["winddir16Point"] if morning else "N",
-            "morning_rain_chance": morning_rain,
-            "max_rain_chance": max(rain_chances) if rain_chances else 0,
-            "morning_uv": morning_uv,
-            "desc": morning[0]["weatherDesc"][0]["value"] if morning else day_data.get("weatherDesc", [{"value": "N/A"}])[0] if isinstance(day_data.get("weatherDesc"), list) else "N/A",
-            "pressure": int(morning[0]["pressure"]) if morning else 1013,
-        }
-        result["forecasts"].append(fc)
-
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Environment Tax Calculation
-# ---------------------------------------------------------------------------
-def calc_env_tax(forecast):
-    """Calculate environment tax based on latest forecast."""
-    tax = {}
-
-    # Wind tax
-    wind_mph = forecast["morning_wind_mph"]
-    wind_tax_per_km = wind_mph * WIND_PENALTY_PER_MPH * CROSSWIND_COEFF * URBAN_SHELTER_REDUCTION
-    tax["wind"] = round(wind_tax_per_km * EXPOSED_KM)
-
-    # Humidity tax
-    avg_humidity = (forecast["start_humidity"] + forecast["finish_humidity"]) / 2
-    if avg_humidity >= HUMIDITY_DRIFT_THRESHOLD:
-        excess = avg_humidity - HUMIDITY_DRIFT_THRESHOLD
-        if excess <= 10:
-            penalty_per_km = 3  # +3"/km for 70-80%
-        else:
-            penalty_per_km = 7  # +5-10"/km for >80%
-        # Estimate km above threshold (linear interpolation)
-        if forecast["start_humidity"] > HUMIDITY_DRIFT_THRESHOLD > forecast["finish_humidity"]:
-            # Crosses threshold during race
-            frac_above = (forecast["start_humidity"] - HUMIDITY_DRIFT_THRESHOLD) / (
-                forecast["start_humidity"] - forecast["finish_humidity"]
-            )
-            km_above = frac_above * RACE_GPS_DISTANCE_KM
-        elif forecast["start_humidity"] > HUMIDITY_DRIFT_THRESHOLD and forecast["finish_humidity"] > HUMIDITY_DRIFT_THRESHOLD:
-            km_above = RACE_GPS_DISTANCE_KM
-        else:
-            km_above = 0
-        # Apply body correction & low-temp correction
-        if forecast["avg_morning_temp"] < 12:
-            temp_correction = 0.6  # cold air reduces humidity impact
-        elif forecast["avg_morning_temp"] < 15:
-            temp_correction = 0.75
-        else:
-            temp_correction = 1.0
-        tax["humidity"] = round(penalty_per_km * km_above * temp_correction * RUNNER["body_correction"])
-    else:
-        tax["humidity"] = 0
-
-    # Temperature tax
-    finish_temp = forecast.get("finish_temp", forecast["late_morning_temp"])
-    if finish_temp > OPTIMAL_TEMP_HIGH:
-        excess = finish_temp - OPTIMAL_TEMP_HIGH
-        penalty_km = 6  # last 6km affected
-        base_tax = excess * 2 * penalty_km / 6
-        tax["temperature"] = round(base_tax * RUNNER["body_correction"])
-    else:
-        tax["temperature"] = 0
-
-    # UV/sunshine tax
-    uv = forecast["morning_uv"]
-    if uv >= 6 and forecast["avg_morning_temp"] > 12:
-        tax["uv"] = round(1 * 5)  # +1"/km for last 5km
-    else:
-        tax["uv"] = 0
-
-    # Turnaround/bends (fixed)
-    tax["turnaround"] = TURNAROUND_TAX
-
-    tax["total"] = sum(tax.values())
-    return tax
-
-
-def assess_signal(env_tax_total, baseline_total=BASELINE["env_tax_total"]):
-    """Determine green/yellow/orange/red light."""
-    delta = abs(env_tax_total - baseline_total)
-    if delta < 10:
-        return "绿灯：方案有效", "green"
-    elif delta < 30:
-        return "黄灯：微调", "yellow"
-    elif delta < 60:
-        return "橙灯：降级考虑", "orange"
-    else:
-        return "红灯：方案失效", "red"
+def _init_model_constants():
+    """Populate model-constant aliases from config (called by _init_from_config)."""
+    global OPTIMAL_TEMP_LOW, OPTIMAL_TEMP_HIGH, HUMIDITY_DRIFT_THRESHOLD, EXPOSED_KM
+    m = CFG.get("env_tax_model", {})
+    OPTIMAL_TEMP_LOW = m.get("optimal_temp_low", 5)
+    OPTIMAL_TEMP_HIGH = m.get("optimal_temp_high", 15)
+    HUMIDITY_DRIFT_THRESHOLD = m.get("humidity_drift_threshold", 70)
+    EXPOSED_KM = m.get("exposed_km", 3.5)
 
 
 # ---------------------------------------------------------------------------
@@ -483,9 +210,9 @@ def generate_report(today):
     is_race_day = days_to_race == 0
     is_d1 = days_to_race == 1
 
-    # Fetch weather
+    # Fetch weather (uses shared weather_client with retry)
     try:
-        raw = fetch_weather_wttr(RACE_CITY)
+        raw = fetch_weather(RACE_CITY)
         weather = parse_hourly_for_race(raw)
         weather_ok = True
     except Exception as e:
@@ -1050,139 +777,12 @@ def _weekday_cn(d):
 
 
 # ---------------------------------------------------------------------------
-# PDF Generation (weasyprint)
+# PDF Generation — delegates to shared pdf_styles module
 # ---------------------------------------------------------------------------
 def md_to_pdf(md_text, pdf_path):
-    """Convert Markdown text to styled PDF using weasyprint.
-
-    Reuses the design system from generate_pdf.py (dark header + orange accent).
-    """
-    try:
-        import markdown as _md
-        import re
-        from weasyprint import HTML as _HTML
-    except ImportError as exc:
-        print(f"[WARN] PDF dependency missing ({exc}), skipping PDF generation.")
-        return False
-
-    html_body = _md.markdown(md_text, extensions=["tables", "fenced_code", "nl2br"])
-
-    # -- post-process: classify blockquotes --------------------------------
-    def _classify_bq(match):
-        content = match.group(1)
-        if any(k in content for k in ["注意", "数据获取失败"]):
-            cls = "note-warning"
-        elif any(k in content for k in ["红灯", "必须降级", "危险"]):
-            cls = "note-danger"
-        elif any(k in content for k in ["本日报", "天气数据", "生成于"]):
-            cls = "note-meta"
-        else:
-            cls = "note-info"
-        return f'<blockquote class="{cls}">{content}</blockquote>'
-
-    html_body = re.sub(
-        r"<blockquote>(.*?)</blockquote>", _classify_bq, html_body, flags=re.DOTALL
-    )
-
-    # Wrap first h1 in title-banner
-    html_body = re.sub(
-        r"<h1>(.*?)</h1>",
-        r'<div class="title-banner"><h1>\1</h1></div>',
-        html_body,
-        count=1,
-    )
-
-    # Orange accent bars for <hr>
-    html_body = html_body.replace("<hr />", '<div class="accent-bar"></div>')
-    html_body = html_body.replace("<hr>", '<div class="accent-bar"></div>')
-
-    full_html = f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head><meta charset="utf-8">
-<style>
-@page {{
-    size: A4;
-    margin: 1.8cm 2cm;
-    @bottom-center {{ content: counter(page); font-size: 9pt; color: #999; }}
-}}
-body {{
-    font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", sans-serif;
-    font-size: 10.5pt; line-height: 1.7; color: #1a1a1a; background: #fff;
-}}
-.title-banner {{
-    background: #2c3e50; color: #fff; padding: 18px 24px 14px;
-    margin: -10px -10px 20px; border-radius: 4px;
-}}
-.title-banner h1 {{
-    font-size: 18pt; font-weight: bold; color: #fff;
-    margin: 0; padding: 0; border: none; letter-spacing: 1px;
-}}
-h2 {{
-    font-size: 14pt; font-weight: bold; color: #2c3e50;
-    border-bottom: 2.5px solid #2c3e50; padding-bottom: 6px;
-    margin-top: 26px; margin-bottom: 12px;
-}}
-h3 {{
-    font-size: 12pt; font-weight: bold; color: #34495e;
-    margin-top: 20px; margin-bottom: 8px;
-    padding-left: 10px; border-left: 3.5px solid #e67e22;
-}}
-.accent-bar {{
-    height: 3px; background: linear-gradient(90deg, #e67e22, #f39c12);
-    border: none; margin: 24px 0; border-radius: 2px;
-}}
-table {{
-    border-collapse: collapse; width: 100%; margin: 12px 0 16px;
-    font-size: 9pt; border: none; border-radius: 4px; overflow: hidden;
-}}
-table tr:first-child {{ background: #2c3e50 !important; }}
-table tr:first-child th, table tr:first-child td {{
-    background: #2c3e50; color: #fff; font-weight: bold; border: none;
-}}
-th, td {{
-    padding: 7px 10px; border-bottom: 1px solid #e8e8e8;
-    text-align: left; vertical-align: top;
-}}
-tbody tr:nth-child(even), tr:nth-child(even) {{ background: #f8f9fa; }}
-tbody tr:nth-child(odd), tr:nth-child(odd)   {{ background: #fff; }}
-blockquote {{
-    margin: 14px 0; padding: 12px 16px; border-radius: 4px;
-    font-size: 10pt; line-height: 1.65; border-left: 4px solid;
-    page-break-inside: avoid;
-}}
-blockquote.note-info    {{ background: #e9f2f8; border-left-color: #3498db; color: #1a3a5c; }}
-blockquote.note-warning {{ background: #fdf2e8; border-left-color: #e67e22; color: #5a3510; }}
-blockquote.note-danger  {{ background: #fdedeb; border-left-color: #c0392b; color: #5a1a15; }}
-blockquote.note-meta    {{ background: #f5f5f5; border-left-color: #999; color: #666; font-size: 9pt; }}
-pre {{
-    background: #f0f3f6; border: 1px solid #dce1e6; border-radius: 4px;
-    padding: 14px 16px; font-family: "Consolas", "Monaco", monospace;
-    font-size: 9pt; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word;
-    color: #2c3e50;
-}}
-code {{
-    font-family: "Consolas", "Monaco", monospace; font-size: 9pt;
-    background: #f0f3f6; padding: 2px 5px; border-radius: 3px; color: #c0392b;
-}}
-pre code {{ background: none; padding: 0; color: #2c3e50; }}
-strong {{ color: #2c3e50; }}
-ul, ol {{ margin: 8px 0; padding-left: 24px; }}
-li {{ margin-bottom: 4px; line-height: 1.65; }}
-p {{ margin: 8px 0; line-height: 1.7; }}
-h2, h3 {{ page-break-after: avoid; }}
-table {{ page-break-inside: auto; }}
-tr {{ page-break-inside: avoid; }}
-</style></head>
-<body>{html_body}</body></html>"""
-
-    try:
-        _HTML(string=full_html).write_pdf(str(pdf_path))
-        size_kb = pdf_path.stat().st_size / 1024
-        print(f"[OK] PDF generated: {pdf_path} ({size_kb:.0f} KB)")
-        return True
-    except Exception as exc:
-        print(f"[WARN] PDF generation failed: {exc}")
-        return False
+    """Convert Markdown text to styled PDF using shared design system."""
+    from pdf_styles import md_to_pdf as _pdf
+    return _pdf(md_text, pdf_path, title=RACE_NAME)
 
 
 # ---------------------------------------------------------------------------
@@ -1190,11 +790,14 @@ tr {{ page-break-inside: avoid; }}
 # ---------------------------------------------------------------------------
 def save_report(report, today, days_to_race):
     """Save report (Markdown + PDF) to both local and OneDrive directories."""
-    md_filename = f"薄荷猫猫_328_天气日报_D-{days_to_race}.md"
-    pdf_filename = f"薄荷猫猫_328_天气日报_D-{days_to_race}.pdf"
+    runner_tag = RUNNER["name"]
+    race_tag = RACE_DATE.strftime("%m%d")  # e.g. "0328"
+    md_filename = f"{runner_tag}_{race_tag}_天气日报_D-{days_to_race}.md"
+    pdf_filename = f"{runner_tag}_{race_tag}_天气日报_D-{days_to_race}.pdf"
     saved_paths = []
 
-    for output_dir in [ONEDRIVE_REPORTS, LOCAL_REPORTS]:
+    output_dirs = [d for d in [ONEDRIVE_REPORTS, LOCAL_REPORTS] if d]
+    for output_dir in output_dirs:
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
             # Save Markdown
@@ -1217,10 +820,15 @@ def save_report(report, today, days_to_race):
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    parser = argparse.ArgumentParser(description="328 苏河半马 Daily Briefing Generator")
+    parser = argparse.ArgumentParser(description="Pre-Race Daily Briefing Generator")
     parser.add_argument("--stdout", action="store_true", help="Print to stdout only")
     parser.add_argument("--date", type=str, help="Override date (YYYY-MM-DD)")
+    parser.add_argument("--config", type=str, help="Path to race_config.yaml")
     args = parser.parse_args()
+
+    # Load configuration
+    cfg = _load_config(args.config)
+    _init_from_config(cfg)
 
     if args.date:
         today = datetime.date.fromisoformat(args.date)
@@ -1228,7 +836,8 @@ def main():
         today = datetime.date.today()
 
     days_to_race = (RACE_DATE - today).days
-    print(f"[INFO] Date: {today}, D-{days_to_race}, generating briefing...")
+    print(f"[INFO] {RACE_NAME}")
+    print(f"[INFO] Runner: {RUNNER['name']}, Date: {today}, D-{days_to_race}")
 
     if days_to_race < 0:
         print("[INFO] Race is over. No report generated.")

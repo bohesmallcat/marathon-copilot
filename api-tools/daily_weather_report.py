@@ -12,19 +12,13 @@ Usage:
 
 import os
 import sys
-import json
 import datetime
 import argparse
-import urllib3
 from pathlib import Path
 
-try:
-    import requests
-except ImportError:
-    print("pip install requests")
-    sys.exit(1)
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# Shared modules
+from weather_client import fetch_weather, parse_weather_simple as parse_weather
+from env_tax import calc_env_tax_simple as calc_env_tax, assess_conditions
 
 # ---------------------------------------------------------------------------
 # Config
@@ -105,135 +99,7 @@ CROSSWIND_COEFF = 0.5
 
 
 # ---------------------------------------------------------------------------
-# Weather fetching
-# ---------------------------------------------------------------------------
-def fetch_weather(city):
-    """Fetch weather from wttr.in (free, no API key)."""
-    url = f"https://wttr.in/{city}?format=j1"
-    r = requests.get(url, timeout=20)
-    r.raise_for_status()
-    return r.json()
-
-
-def parse_weather(data, target_date=None):
-    """Extract weather metrics from wttr.in JSON."""
-    current = data["current_condition"][0]
-    result = {
-        "current": {
-            "temp_c": int(current["temp_C"]),
-            "feels_like_c": int(current["FeelsLikeC"]),
-            "humidity": int(current["humidity"]),
-            "pressure_hpa": int(current["pressure"]),
-            "wind_kmh": int(current["windspeedKmph"]),
-            "wind_mph": round(int(current["windspeedKmph"]) * 0.621371),
-            "wind_dir": current["winddir16Point"],
-            "desc": current["weatherDesc"][0]["value"],
-            "uv": current.get("uvIndex", "N/A"),
-        },
-        "forecasts": [],
-    }
-
-    for day in data.get("weather", []):
-        hourly_data = day["hourly"]
-        # Race-relevant hours: 6am-11am slots (indices 2,3 in wttr.in 3-hourly)
-        morning_hours = [h for h in hourly_data if int(h["time"]) in [600, 900]]
-        late_morning = [h for h in hourly_data if int(h["time"]) in [1200]]
-
-        if morning_hours:
-            avg_temp = sum(int(h["tempC"]) for h in morning_hours) // len(morning_hours)
-            avg_humidity = sum(int(h["humidity"]) for h in morning_hours) // len(morning_hours)
-            avg_wind = sum(int(h["windspeedKmph"]) for h in morning_hours) // len(morning_hours)
-        else:
-            avg_temp = (int(day["mintempC"]) + int(day["maxtempC"])) // 2
-            avg_humidity = 50
-            avg_wind = 10
-
-        late_temp = int(late_morning[0]["tempC"]) if late_morning else int(day["maxtempC"])
-
-        forecast = {
-            "date": day["date"],
-            "min_temp": int(day["mintempC"]),
-            "max_temp": int(day["maxtempC"]),
-            "morning_avg_temp": avg_temp,
-            "late_morning_temp": late_temp,
-            "morning_humidity": avg_humidity,
-            "morning_wind_kmh": avg_wind,
-            "morning_wind_mph": round(avg_wind * 0.621371),
-            "desc": hourly_data[3]["weatherDesc"][0]["value"] if len(hourly_data) > 3 else "N/A",
-            "rain_chance": max(int(h.get("chanceofrain", 0)) for h in hourly_data),
-            "pressure": int(hourly_data[3]["pressure"]) if len(hourly_data) > 3 else 1013,
-        }
-        result["forecasts"].append(forecast)
-
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Impact analysis
-# ---------------------------------------------------------------------------
-def calc_env_tax(weather_forecast, race, is_full_marathon=False):
-    """Calculate environmental tax in seconds."""
-    tax = {}
-    wind_mph = weather_forecast["morning_wind_mph"]
-    wind_tax_per_km = wind_mph * WIND_PENALTY_PER_MPH * CROSSWIND_COEFF
-    exposed_km = 6 if not is_full_marathon else 15
-    tax["wind"] = round(wind_tax_per_km * exposed_km)
-
-    humidity = weather_forecast["morning_humidity"]
-    if humidity >= HUMIDITY_DRIFT_THRESHOLD:
-        tax["humidity"] = round((humidity - HUMIDITY_DRIFT_THRESHOLD) * 0.5 * (21 if not is_full_marathon else 42))
-    else:
-        tax["humidity"] = 0
-
-    late_temp = weather_forecast["late_morning_temp"]
-    if late_temp > OPTIMAL_TEMP_HIGH:
-        excess = late_temp - OPTIMAL_TEMP_HIGH
-        penalty_km = 6 if not is_full_marathon else 20
-        tax["temperature"] = round(excess * 2 * penalty_km / 6)
-    else:
-        tax["temperature"] = 0
-
-    if is_full_marathon:
-        tax["turnaround"] = 10
-    else:
-        tax["turnaround"] = 8
-
-    tax["total"] = sum(tax.values())
-    return tax
-
-
-def assess_conditions(weather_forecast):
-    """Rate overall conditions."""
-    temp = weather_forecast["late_morning_temp"]
-    humidity = weather_forecast["morning_humidity"]
-    rain = weather_forecast["rain_chance"]
-
-    score = 100
-    if temp > OPTIMAL_TEMP_HIGH:
-        score -= (temp - OPTIMAL_TEMP_HIGH) * 5
-    if temp < OPTIMAL_TEMP_LOW:
-        score -= (OPTIMAL_TEMP_LOW - temp) * 3
-    if humidity > 60:
-        score -= (humidity - 60) * 1
-    if humidity > HUMIDITY_DRIFT_THRESHOLD:
-        score -= 10
-    if rain > 50:
-        score -= 10
-    if weather_forecast["morning_wind_kmh"] > 20:
-        score -= 5
-
-    if score >= 90:
-        return "优 (Excellent)"
-    elif score >= 75:
-        return "良 (Good)"
-    elif score >= 60:
-        return "中 (Fair)"
-    else:
-        return "差 (Poor)"
-
-
-# ---------------------------------------------------------------------------
-# Report generation
+# Report generation (uses shared fetch_weather, parse_weather, calc_env_tax)
 # ---------------------------------------------------------------------------
 def generate_report(today):
     """Generate the daily weather report."""
@@ -307,7 +173,7 @@ def generate_report(today):
             lines.append("")
 
         if race_fc:
-            env_tax = calc_env_tax(race_fc, race, is_full_marathon=is_full)
+            env_tax = calc_env_tax(race_fc, is_full=is_full)
             condition_rating = assess_conditions(race_fc)
 
             lines.append(f"### 环境影响评估")
