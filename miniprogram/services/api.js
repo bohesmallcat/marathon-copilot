@@ -43,4 +43,9 @@ module.exports = {
   getWeatherForecast: (data) => callCloud('weather', 'getForecast', data),
   calculateWeatherImpact: (data) => callCloud('weather', 'calculateImpact', data),
   trackRaceWeather: (data) => callCloud('weather', 'trackRace', data),
+
+  // 每日训练 & 饮食计划
+  getDailyPlan: (data) => callCloud('dailyPlan', 'getDailyPlan', data),
+  saveDailyPlan: (data) => callCloud('dailyPlan', 'savePlan', data),
+  getMyDailyPlans: () => callCloud('dailyPlan', 'getMyPlans'),
 }

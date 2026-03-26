@@ -57,6 +57,10 @@ Page({
     wx.navigateTo({ url: '/pages/race-review/race-review' })
   },
 
+  goToDailyPlan() {
+    wx.navigateTo({ url: '/pages/daily-plan/daily-plan' })
+  },
+
   goToReport(e) {
     const { id } = e.currentTarget.dataset
     wx.navigateTo({ url: `/pages/report-detail/report-detail?id=${id}` })

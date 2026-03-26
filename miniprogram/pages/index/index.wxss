@@ -88,6 +88,7 @@
 
 .action-icon-goal { background: linear-gradient(135deg, #3498DB, #2980B9); }
 .action-icon-review { background: linear-gradient(135deg, #F39C12, #E67E22); }
+.action-icon-plan { background: linear-gradient(135deg, #2ECC71, #27AE60); }
 
 .action-title { font-size: 30rpx; font-weight: 600; margin-bottom: 4rpx; }
 .action-desc { font-size: 22rpx; color: var(--text-hint); line-height: 1.5; }

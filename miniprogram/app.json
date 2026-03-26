@@ -5,6 +5,7 @@
     "pages/profile/profile",
     "pages/race-goal/race-goal",
     "pages/race-review/race-review",
+    "pages/daily-plan/daily-plan",
     "pages/history/history",
     "pages/report-detail/report-detail"
   ],

@@ -3,15 +3,18 @@
 #  排除个人跑者数据、生成报告、API 密钥等隐私内容
 # ══════════════════════════════════════════════════════════
 
+# ── 个人跑者配置（含体重、身高、PB 等隐私数据） ──
+api-tools/race_config.yaml
+api-tools/race_config_*.yaml
+!api-tools/race_config.example.yaml
+
 # ── 个人跑者数据目录（原始截图、HRV图片等） ──
 runner_data_*/
-叶老师数据/
-薄荷猫猫数据/
+*数据/
 
 # ── 个人跑者生成报告（PDF 输出目录） ──
 runner_reports_*/
-叶老师报告/
-薄荷猫猫报告/
+*报告/
 
 # ── 个人跑者 Markdown 报告 ──
 *_PB_*.md
@@ -19,14 +22,11 @@ runner_reports_*/
 *_比赛复盘*.md
 *_目标设定*.md
 *_作战方案*.md
-叶老师_*.md
-薄荷猫猫_*.md
-YeLaoShi_*.md
+*_天气日报_*.md
 Weather_Impact_Summary_*.md
 
 # ── 个人跑者数据图片（根目录散落） ──
 *_runner_*.jpg
-薄荷猫猫_*.jpg
 
 # ── 所有生成的 PDF ──
 *.pdf

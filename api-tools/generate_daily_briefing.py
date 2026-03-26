@@ -577,18 +577,21 @@ def generate_report(today):
     lines.append("")
     lines.append("## 7. 配速方案确认")
     lines.append("")
+    plan_a = RUNNER["plan_a"]
+    plan_b = RUNNER["plan_b"]
+    pace_table = CFG.get("pace_table", {})
     if signal_color in ("green", "yellow") or (race_fc_is_proxy and signal_color in ("orange",)):
         # When using proxy data, maintain plan unless clearly red
         if race_fc_is_proxy and signal_color == "orange":
             lines.append(
-                "**配速方案暂时维持 Plan A: 1:33:00**"
-                "（当前信号基于代理预报数据，比赛日预报尚未到位。待 D-2 获得精准预报后再做最终判定。）"
+                f"**配速方案暂时维持 Plan A: {plan_a['time']}**"
+                f"（当前信号基于代理预报数据，比赛日预报尚未到位。待 D-2 获得精准预报后再做最终判定。）"
             )
         else:
-            lines.append("**配速方案维持不变。** Plan A: 1:33:00")
+            lines.append(f"**配速方案维持不变。** Plan A: {plan_a['time']}")
         lines.append("")
         lines.append("```")
-        lines.append(f"{RUNNER['name']} | 目标: 1:33:00 | PB: {RUNNER['pb']} | 苏河半马")
+        lines.append(f"{RUNNER['name']} | 目标: {plan_a['time']} | PB: {RUNNER['pb']} | 苏河半马")
         if race_fc:
             lines.append(
                 f"{race_fc['desc']} | 起跑{race_fc['start_temp']}°C "
@@ -596,16 +599,13 @@ def generate_report(today):
                 f"风{race_fc['morning_wind_mph']}mph"
             )
         lines.append("")
-        lines.append("[0-5k]  GPS 4'26\" | HR < 162 | 复制315前半程，克制")
-        lines.append("[6-12k] GPS 4'21\" | HR 160-166 | 巡航，10k补胶")
-        lines.append("[13-18k] GPS 4'20\" | HR < 170 | 苏河平路，无风")
-        lines.append("[19k-F] GPS 4'10\" | 释放阈值 | 拿回被315偷走的3分钟")
-        lines.append("熔断：12k前HR>168 → Plan B (1:33:50, GPS 4'25\")")
-        lines.append("脚踝：刺痛持续2km → 降至 5'00\"")
-        lines.append("装备：足弓贴扎+凡士林+水泡贴+五趾袜 已测试确认")
+        for split in pace_table.get("splits", []):
+            lines.append(split)
+        for rule in pace_table.get("fuse_rules", []):
+            lines.append(rule)
         lines.append("```")
     elif signal_color == "orange":
-        lines.append("**考虑降级至 Plan B: 1:33:50 (GPS 4'25\"/km)**")
+        lines.append(f"**考虑降级至 Plan B: {plan_b['time']} ({plan_b.get('gps_pace', plan_b['pace'])})**")
     else:
         lines.append("**必须降级。重新评估目标。**")
     lines.append("")

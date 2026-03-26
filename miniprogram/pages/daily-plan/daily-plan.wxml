@@ -1,0 +1,143 @@
+<view class="container">
+  <!-- Race Header -->
+  <view class="card race-header" wx:if="{{hasRace}}">
+    <view class="race-name">{{raceName}}</view>
+    <view class="race-meta">
+      <text>{{raceDate}}</text>
+      <text class="countdown">D-{{daysToRace}}</text>
+    </view>
+  </view>
+
+  <!-- Race Setup (if no race configured) -->
+  <view class="card" wx:if="{{!hasRace}}">
+    <view class="section-title">设置比赛信息</view>
+    <view class="form-group">
+      <view class="form-label">比赛名称</view>
+      <input class="form-input" placeholder="例：上海半程马拉松" bindinput="onRaceNameInput" value="{{raceName}}" />
+    </view>
+    <view class="form-group">
+      <view class="form-label">比赛日期</view>
+      <picker mode="date" bindchange="onDateChange" value="{{raceDate}}">
+        <view class="form-input picker-value">{{raceDate || '选择日期'}}</view>
+      </picker>
+    </view>
+    <view class="form-group">
+      <view class="form-label">赛事距离</view>
+      <view class="distance-options">
+        <view class="option-btn {{raceDistance === 21.0975 ? 'active' : ''}}" bindtap="setDistance" data-km="21.0975">半马</view>
+        <view class="option-btn {{raceDistance === 42.195 ? 'active' : ''}}" bindtap="setDistance" data-km="42.195">全马</view>
+      </view>
+    </view>
+    <view class="form-group">
+      <view class="form-label">目标成绩</view>
+      <input class="form-input" placeholder="例：1:33:00" bindinput="onTargetInput" value="{{targetTime}}" />
+    </view>
+    <button class="btn-primary" bindtap="confirmRace">确认比赛信息</button>
+  </view>
+
+  <!-- Tab Switcher -->
+  <view class="tab-bar" wx:if="{{hasRace}}">
+    <view class="tab {{activeTab === 'training' ? 'tab-active' : ''}}" bindtap="switchTab" data-tab="training">训练计划</view>
+    <view class="tab {{activeTab === 'diet' ? 'tab-active' : ''}}" bindtap="switchTab" data-tab="diet">饮食建议</view>
+    <view class="tab {{activeTab === 'recovery' ? 'tab-active' : ''}}" bindtap="switchTab" data-tab="recovery">恢复监控</view>
+  </view>
+
+  <!-- Training Tab -->
+  <view wx:if="{{hasRace && activeTab === 'training' && training}}">
+    <view class="card">
+      <view class="plan-phase">
+        <text class="tag tag-info">{{training.phase}}</text>
+      </view>
+      <view class="plan-title">{{training.workout}}</view>
+      <view class="plan-table">
+        <view class="plan-row">
+          <text class="plan-label">距离/配速</text>
+          <text class="plan-value">{{training.distance}}</text>
+        </view>
+        <view class="plan-row">
+          <text class="plan-label">强度</text>
+          <text class="plan-value">{{training.rpe}}</text>
+        </view>
+        <view class="plan-row">
+          <text class="plan-label">心率上限</text>
+          <text class="plan-value">{{training.hrCap}}</text>
+        </view>
+        <view class="plan-row">
+          <text class="plan-label">装备</text>
+          <text class="plan-value">{{training.gear}}</text>
+        </view>
+      </view>
+      <view class="plan-details">{{training.details}}</view>
+    </view>
+    <view class="card" wx:if="{{training.postRun && training.postRun.length > 0}}">
+      <view class="card-title">跑后必做</view>
+      <view class="checklist">
+        <view class="check-item" wx:for="{{training.postRun}}" wx:key="index">
+          <text class="check-bullet">•</text>
+          <text>{{item}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Diet Tab -->
+  <view wx:if="{{hasRace && activeTab === 'diet' && diet}}">
+    <view class="card">
+      <view class="plan-phase">
+        <text class="tag tag-warning">{{diet.phase}}</text>
+      </view>
+      <view class="plan-table">
+        <view class="plan-row">
+          <text class="plan-label">碳水目标</text>
+          <text class="plan-value">{{diet.carbTarget}}</text>
+        </view>
+        <view class="plan-row">
+          <text class="plan-label">蛋白质</text>
+          <text class="plan-value">{{diet.proteinTarget}}</text>
+        </view>
+        <view class="plan-row">
+          <text class="plan-label">水分</text>
+          <text class="plan-value">{{diet.water}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="card">
+      <view class="card-title">餐食建议</view>
+      <view class="meal-list">
+        <view class="meal-item" wx:for="{{diet.mealList}}" wx:key="index">
+          <text class="meal-time">{{item.time}}</text>
+          <text class="meal-desc">{{item.desc}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="card" wx:if="{{diet.notes && diet.notes.length > 0}}">
+      <view class="card-title">注意事项</view>
+      <view class="notes-list">
+        <view class="note-item" wx:for="{{diet.notes}}" wx:key="index">
+          <text>{{item}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Recovery Tab -->
+  <view wx:if="{{hasRace && activeTab === 'recovery' && recovery}}">
+    <view class="card">
+      <view class="card-title">恢复监控 Checklist</view>
+      <view class="checklist">
+        <view class="check-item" wx:for="{{recovery}}" wx:key="index">
+          <checkbox value="{{item.key}}" checked="{{item.checked}}" bindtap="toggleRecovery" data-index="{{index}}" />
+          <view class="check-content">
+            <text class="check-label">{{item.label}}</text>
+            <text class="check-desc">{{item.desc}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Loading -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-text">加载中...</view>
+  </view>
+</view>

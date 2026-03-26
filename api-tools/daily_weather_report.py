@@ -38,7 +38,7 @@ def load_env():
 
 load_env()
 
-# Race calendar
+# Race calendar (example data — replace with your own races)
 RACES = [
     {
         "name": "上海半程马拉松",
@@ -52,19 +52,19 @@ RACES = [
         "runners": [
             {
                 "name": "Runner_A",
-                "goal": "1:16:00",
-                "pace": "3'36\"/km",
-                "tpace_reserve": "11\"/km",
-                "finish_est": "08:16",
-                "risk": "右踝骨髓水肿+跟腱变性 (伤病风险 >> 环境风险)",
+                "goal": "sub-1:20",
+                "pace": "3'47\"/km",
+                "tpace_reserve": "12\"/km",
+                "finish_est": "08:20",
+                "risk": "伤病恢复中（伤病风险 >> 环境风险）",
             },
             {
                 "name": "Runner_B",
-                "goal": "1:33:00",
-                "pace": "4'24\"/km",
-                "tpace_reserve": "21\"/km",
-                "finish_est": "08:33",
-                "risk": "周跑量 50km/周 (C级, 后程衰减风险 >> 环境风险)",
+                "goal": "sub-1:35",
+                "pace": "4'30\"/km",
+                "tpace_reserve": "20\"/km",
+                "finish_est": "08:35",
+                "risk": "训练量偏低（后程衰减风险 >> 环境风险）",
             },
         ],
     },
@@ -80,11 +80,11 @@ RACES = [
         "runners": [
             {
                 "name": "Runner_A",
-                "goal": "2:35:00 (Plan B)",
-                "pace": "3'41\"/km",
+                "goal": "sub-2:40",
+                "pace": "3'47\"/km",
                 "tpace_reserve": "16\"/km",
-                "finish_est": "10:05",
-                "risk": "3/15半马后仅7天恢复 + 右踝伤病",
+                "finish_est": "10:10",
+                "risk": "赛间恢复时间短 + 伤病",
             },
         ],
     },

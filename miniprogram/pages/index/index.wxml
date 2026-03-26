@@ -39,6 +39,12 @@
       <view class="action-title">赛后深度复盘</view>
       <view class="action-desc">偏差分解 + 根因链分析 + 能力重估 + 下场建议</view>
     </view>
+
+    <view class="action-card card" bindtap="goToDailyPlan">
+      <view class="action-icon action-icon-plan">P</view>
+      <view class="action-title">每日训练 & 饮食</view>
+      <view class="action-desc">赛前倒计时训练计划 + 碳水负荷饮食方案 + 恢复监控</view>
+    </view>
   </view>
 
   <!-- Recent Reports -->
