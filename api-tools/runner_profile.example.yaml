@@ -128,6 +128,33 @@ health:
       resolution: "Physiotherapy + eccentric exercises"
   chronic_conditions: []         # e.g., "plantar_fasciitis_history"
 
+# Female physiology — menstrual cycle tracking (optional, female runners)
+# Set enabled: false or omit this section entirely for male runners or
+# runners on hormonal contraceptives that suppress the natural cycle.
+menstrual_cycle:
+  enabled: false                 # true to activate cycle-aware training
+  cycle_length: 28               # Average cycle length in days (typical 25-35)
+  last_period_start: "2026-03-01" # First day of most recent period (YYYY-MM-DD)
+  sensitivity: 1.0               # Individual sensitivity to cycle effects (0.0-2.0)
+                                 #   0.0 = no effect observed / disabled
+                                 #   1.0 = standard (literature defaults)
+                                 #   1.5 = high sensitivity (symptoms pronounced)
+                                 #   2.0 = very high sensitivity
+  contraceptive: "none"          # "none" / "combined_pill" / "progestin_pill" /
+                                 # "hormonal_iud" / "copper_iud" / "implant" / "other"
+                                 # Hormonal types → cycle periodization auto-disabled
+  menstruation_days: 5           # Typical duration of period (days)
+  flow_intensity: "normal"       # "light" / "normal" / "heavy" (affects iron advice)
+  known_symptoms:                # Self-reported symptoms to personalise guidance
+    pms_severity: "mild"         # "none" / "mild" / "moderate" / "severe"
+    cramps: "mild"               # "none" / "mild" / "moderate" / "severe"
+    sleep_disruption: false      # true if luteal-phase sleep is noticeably worse
+    mood_swings: false           # true if mood changes affect training motivation
+  ferritin_last_check:
+    value: 45                    # ng/mL — target ≥ 30 for female runners
+    date: "2026-02-15"
+    notes: "Within normal range"
+
 # HRV data (if available from COROS/Garmin/Apple Watch)
 hrv:
   device: "COROS"                # COROS / Garmin / Apple Watch / other

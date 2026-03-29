@@ -14,7 +14,8 @@ Algorithms included:
   6. Pacing Plan Generator
   7. Training Periodization Model (NEW — not in utils.js)
   8. Weekly Training Template Generator (NEW — not in utils.js)
-  9. Utility / formatting functions
+  9. Menstrual Cycle Model — female athlete physiology (NEW)
+ 10. Utility / formatting functions
 
 Dependencies: Python standard library only (math, datetime, re).
 
@@ -1098,7 +1099,474 @@ def generate_week_template(
 
 
 # ============================================================
-# 9. Utility / Formatting Functions
+# 9. Menstrual Cycle Model (Female Athlete Physiology)
+# ============================================================
+#
+# Evidence-based model for cycle-aware training periodization.
+# References:
+#   - McNulty et al. (2020) Sports Med — meta-analysis on MC & exercise
+#   - Sims ST (2016, 2022) ROAR / Next Level
+#   - Elliott-Sale et al. (2021) Sports Med — methodological standards
+#   - Bruinvels et al. (2017) Sports Med — iron & MC in female athletes
+#   - Herzberg et al. (2017) Orthop J Sports Med — ACL injury risk & MC
+#   - Janse de Jonge et al. (2019) Med Sci Sports Exerc — progesterone effects
+#
+# Phase model (normalised to 28 days, linearly scaled for other lengths):
+#   Menstruation  (经期):   norm days 1-5
+#   Follicular    (卵泡期): norm days 6-13
+#   Ovulation     (排卵期): norm days 14-16
+#   Early Luteal  (早期黄体期): norm days 17-21
+#   Late Luteal   (晚期黄体期/PMS): norm days 22-28
+
+# Phase boundary definitions on the normalised 28-day scale.
+# Bounds are (exclusive_lo, inclusive_hi] so that the entire
+# continuous 0-28 range is covered without gaps.
+_PHASE_BOUNDS_28 = [
+    ("menstruation",  "经期",        0,  5),
+    ("follicular",    "卵泡期",      5, 13),
+    ("ovulation",     "排卵期",     13, 16),
+    ("early_luteal",  "早期黄体期",  16, 21),
+    ("late_luteal",   "晚期黄体期",  21, 28),
+]
+
+# Per-phase training coefficients
+# Keys: volume, intensity, rpe_adjust, recovery, injury_risk,
+#        core_temp_delta, rhr_delta, extra_kcal, extra_carb_g_per_kg,
+#        extra_water_ml, iron_alert
+_PHASE_COEFFICIENTS = {
+    "menstruation": {
+        "volume":       0.70,
+        "intensity":    0.60,
+        "rpe_adjust":   0.5,
+        "recovery":     1.15,
+        "injury_risk":  1.2,
+        "core_temp_delta": 0.0,
+        "rhr_delta":    0,
+        "extra_kcal":   0,
+        "extra_carb_g_per_kg": 0.5,
+        "extra_water_ml": 0,
+        "iron_alert":   True,
+    },
+    "follicular": {
+        "volume":       1.00,
+        "intensity":    1.00,
+        "rpe_adjust":   0.0,
+        "recovery":     0.80,
+        "injury_risk":  0.7,
+        "core_temp_delta": 0.0,
+        "rhr_delta":    0,
+        "extra_kcal":   0,
+        "extra_carb_g_per_kg": 0.0,
+        "extra_water_ml": 0,
+        "iron_alert":   False,
+    },
+    "ovulation": {
+        "volume":       0.85,
+        "intensity":    0.75,
+        "rpe_adjust":   0.3,
+        "recovery":     1.10,
+        "injury_risk":  3.0,
+        "core_temp_delta": 0.15,
+        "rhr_delta":    1,
+        "extra_kcal":   0,
+        "extra_carb_g_per_kg": 0.0,
+        "extra_water_ml": 200,
+        "iron_alert":   False,
+    },
+    "early_luteal": {
+        "volume":       0.90,
+        "intensity":    0.85,
+        "rpe_adjust":   0.7,
+        "recovery":     1.15,
+        "injury_risk":  1.1,
+        "core_temp_delta": 0.3,
+        "rhr_delta":    3,
+        "extra_kcal":   100,
+        "extra_carb_g_per_kg": 0.5,
+        "extra_water_ml": 200,
+        "iron_alert":   False,
+    },
+    "late_luteal": {
+        "volume":       0.65,
+        "intensity":    0.50,
+        "rpe_adjust":   1.2,
+        "recovery":     1.30,
+        "injury_risk":  1.1,
+        "core_temp_delta": 0.4,
+        "rhr_delta":    4,
+        "extra_kcal":   200,
+        "extra_carb_g_per_kg": 1.5,
+        "extra_water_ml": 400,
+        "iron_alert":   False,
+    },
+}
+
+
+def get_cycle_phase(
+    reference_date: str,
+    last_period_start: str,
+    cycle_length: int = 28,
+) -> Dict[str, Union[str, int, float]]:
+    """Determine menstrual cycle phase for a given date.
+
+    Args:
+        reference_date: Date to query, ISO format ``YYYY-MM-DD``.
+        last_period_start: First day of the most recent period, ``YYYY-MM-DD``.
+        cycle_length: Individual cycle length in days (default 28).
+
+    Returns:
+        Dict with ``phase``, ``phase_cn``, ``cycle_day``, ``normalized_day``,
+        ``days_in_phase``, ``phase_progress`` (0-1).
+
+    Example:
+        >>> get_cycle_phase("2025-04-01", "2025-03-22", 25)
+        {'phase': 'ovulation', 'phase_cn': '排卵期', 'cycle_day': 11, ...}
+    """
+    ref = datetime.strptime(reference_date, "%Y-%m-%d").date()
+    lps = datetime.strptime(last_period_start, "%Y-%m-%d").date()
+    raw_day = (ref - lps).days % cycle_length + 1  # 1-based cycle day
+    norm_day = raw_day / cycle_length * 28  # map onto 28-day scale
+
+    for phase_id, phase_cn, lo, hi in _PHASE_BOUNDS_28:
+        if lo < norm_day <= hi:
+            phase_len = hi - lo
+            progress = (norm_day - lo) / phase_len
+            return {
+                "phase": phase_id,
+                "phase_cn": phase_cn,
+                "cycle_day": raw_day,
+                "normalized_day": round(norm_day, 1),
+                "days_in_phase": round(phase_len / 28 * cycle_length),
+                "phase_progress": round(progress, 2),
+            }
+    # fallback (should not reach)
+    return {
+        "phase": "late_luteal",
+        "phase_cn": "晚期黄体期",
+        "cycle_day": raw_day,
+        "normalized_day": round(norm_day, 1),
+        "days_in_phase": round(6 / 28 * cycle_length),
+        "phase_progress": 1.0,
+    }
+
+
+def get_cycle_training_coefficients(
+    phase: str,
+    individual_sensitivity: float = 1.0,
+) -> Dict[str, float]:
+    """Return training modification coefficients for a cycle phase.
+
+    Args:
+        phase: Phase identifier (e.g. ``"follicular"``, ``"late_luteal"``).
+        individual_sensitivity: Personal multiplier (0.0-2.0).
+            1.0 = standard response, 0.0 = no cycle effect,
+            2.0 = very high sensitivity.
+
+    Returns:
+        Dict of coefficients: ``volume``, ``intensity``, ``rpe_adjust``,
+        ``recovery``, ``injury_risk``.
+
+    Example:
+        >>> get_cycle_training_coefficients("late_luteal", 1.0)
+        {'volume': 0.65, 'intensity': 0.5, ...}
+    """
+    base = _PHASE_COEFFICIENTS.get(phase, _PHASE_COEFFICIENTS["follicular"])
+    s = max(0.0, min(2.0, individual_sensitivity))
+    # Sensitivity scales the *deviation from neutral* (neutral = follicular).
+    # sensitivity=0 → all coefficients become neutral (1.0 / 0.0).
+    vol = 1.0 - (1.0 - base["volume"]) * s
+    inten = 1.0 - (1.0 - base["intensity"]) * s
+    rpe = base["rpe_adjust"] * s
+    rec = 1.0 + (base["recovery"] - 1.0) * s
+    inj = 1.0 + (base["injury_risk"] - 1.0) * s
+    return {
+        "volume": round(vol, 2),
+        "intensity": round(inten, 2),
+        "rpe_adjust": round(rpe, 2),
+        "recovery": round(rec, 2),
+        "injury_risk": round(inj, 2),
+    }
+
+
+def get_cycle_nutrition_adjustments(
+    phase: str,
+    weight_kg: float,
+    individual_sensitivity: float = 1.0,
+) -> Dict[str, Union[float, int, str, bool]]:
+    """Return nutrition / hydration adjustments for a cycle phase.
+
+    Args:
+        phase: Phase identifier.
+        weight_kg: Runner body weight in kg.
+        individual_sensitivity: Personal multiplier (0.0-2.0).
+
+    Returns:
+        Dict: ``extra_kcal``, ``extra_carb_g``, ``extra_water_ml``,
+        ``core_temp_delta``, ``rhr_delta``, ``iron_alert``.
+
+    Example:
+        >>> get_cycle_nutrition_adjustments("late_luteal", 52, 1.0)
+        {'extra_kcal': 200, 'extra_carb_g': 78, ...}
+    """
+    base = _PHASE_COEFFICIENTS.get(phase, _PHASE_COEFFICIENTS["follicular"])
+    s = max(0.0, min(2.0, individual_sensitivity))
+    return {
+        "extra_kcal": round(base["extra_kcal"] * s),
+        "extra_carb_g": round(base["extra_carb_g_per_kg"] * weight_kg * s),
+        "extra_water_ml": round(base["extra_water_ml"] * s),
+        "core_temp_delta": round(base["core_temp_delta"] * s, 2),
+        "rhr_delta": round(base["rhr_delta"] * s),
+        "iron_alert": base["iron_alert"],
+    }
+
+
+def get_cycle_week_map(
+    week_start: str,
+    last_period_start: str,
+    cycle_length: int = 28,
+) -> List[Dict[str, Union[str, int]]]:
+    """Map each day of a training week to its cycle phase.
+
+    Args:
+        week_start: Monday of the training week, ``YYYY-MM-DD``.
+        last_period_start: First day of the most recent period, ``YYYY-MM-DD``.
+        cycle_length: Individual cycle length in days.
+
+    Returns:
+        List of 7 dicts, one per day (Mon-Sun), each containing
+        ``date``, ``weekday_cn``, ``cycle_day``, ``phase``, ``phase_cn``.
+
+    Example:
+        >>> get_cycle_week_map("2025-03-30", "2025-03-22", 25)
+    """
+    weekdays_cn = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+    ws = datetime.strptime(week_start, "%Y-%m-%d").date()
+    result = []
+    for i in range(7):
+        d = ws + timedelta(days=i)
+        info = get_cycle_phase(d.isoformat(), last_period_start, cycle_length)
+        result.append({
+            "date": d.isoformat(),
+            "weekday_cn": weekdays_cn[i],
+            "cycle_day": info["cycle_day"],
+            "phase": info["phase"],
+            "phase_cn": info["phase_cn"],
+        })
+    return result
+
+
+def get_cycle_phase_calendar(
+    start_date: str,
+    last_period_start: str,
+    cycle_length: int = 28,
+    num_weeks: int = 4,
+) -> List[Dict]:
+    """Generate a multi-week calendar of cycle phases for long-term planning.
+
+    Args:
+        start_date: First Monday of the planning window, ``YYYY-MM-DD``.
+        last_period_start: Most recent period start, ``YYYY-MM-DD``.
+        cycle_length: Individual cycle length in days.
+        num_weeks: Number of weeks to generate.
+
+    Returns:
+        List of week summaries, each containing ``week_number``,
+        ``week_start``, ``dominant_phase``, ``dominant_phase_cn``,
+        ``phase_breakdown`` (dict of phase -> day count),
+        ``recommended_quality_days`` (list of weekday indices 0-6
+        best suited for intensity work).
+    """
+    sd = datetime.strptime(start_date, "%Y-%m-%d").date()
+    calendar = []
+    for w in range(num_weeks):
+        ws = sd + timedelta(weeks=w)
+        phase_counts: Dict[str, int] = {}
+        phase_cn_map: Dict[str, str] = {}
+        days_info = []
+        for d_i in range(7):
+            d = ws + timedelta(days=d_i)
+            info = get_cycle_phase(d.isoformat(), last_period_start, cycle_length)
+            p = info["phase"]
+            phase_counts[p] = phase_counts.get(p, 0) + 1
+            phase_cn_map[p] = info["phase_cn"]
+            days_info.append((d_i, info))
+
+        dominant = max(phase_counts, key=phase_counts.get)  # type: ignore[arg-type]
+        # Recommend quality days: pick days in follicular or early luteal
+        quality_days = [
+            d_i for d_i, info in days_info
+            if info["phase"] in ("follicular", "early_luteal")
+        ]
+        calendar.append({
+            "week_number": w + 1,
+            "week_start": ws.isoformat(),
+            "dominant_phase": dominant,
+            "dominant_phase_cn": phase_cn_map[dominant],
+            "phase_breakdown": phase_counts,
+            "recommended_quality_days": quality_days,
+        })
+    return calendar
+
+
+def get_phase_training_guidance(phase: str) -> Dict[str, Union[str, List[str]]]:
+    """Return human-readable training guidance for a cycle phase.
+
+    Args:
+        phase: Phase identifier.
+
+    Returns:
+        Dict with ``phase_cn``, ``summary``, ``do`` (list), ``avoid`` (list),
+        ``nutrition_tips`` (list), ``recovery_tips`` (list).
+    """
+    guidance = {
+        "menstruation": {
+            "phase_cn": "经期",
+            "summary": "激素低谷期。铁流失增加，炎症因子升高。以轻松有氧和恢复为主。",
+            "do": [
+                "轻松有氧跑 (Z2, HR < 70% HRmax)",
+                "技术训练和跑姿练习",
+                "柔韧性和灵活性训练",
+                "交叉训练（游泳、骑车）",
+                "轻量力量训练（降低负荷）",
+            ],
+            "avoid": [
+                "高强度间歇训练 (VO2max)",
+                "大流量日长距离跑 (>90min)",
+                "最大力量训练",
+                "新增训练内容或新路线",
+            ],
+            "nutrition_tips": [
+                "关注铁摄入：红肉、菠菜、黑木耳",
+                "维C促进铁吸收：柑橘类水果搭配含铁食物",
+                "抗炎食物：三文鱼、蓝莓、姜黄",
+                "铁蛋白 <30ng/mL 应考虑补铁（遵医嘱）",
+            ],
+            "recovery_tips": [
+                "睡眠可能因孕酮撤退受影响，保证 8h+",
+                "轻度活动优于完全静止（促进血液循环）",
+                "可使用热敷缓解痛经",
+                "镁补充 200-400mg/天可改善症状",
+            ],
+        },
+        "follicular": {
+            "phase_cn": "卵泡期",
+            "summary": "雌激素上升，体能巅峰窗口。力量、速度、耐力均处最佳状态。",
+            "do": [
+                "VO2max 间歇训练（最佳质量课窗口）",
+                "节奏跑 / 乳酸阈训练",
+                "长距离训练（可达 120min+）",
+                "速度训练和坡道冲刺",
+                "最大力量训练（高负荷低次数）",
+                "爆发力训练（弹跳、跨步跑）",
+            ],
+            "avoid": [
+                "无特殊禁忌",
+                "唯一注意：不因状态好而大幅超量",
+            ],
+            "nutrition_tips": [
+                "标准碳水和蛋白质摄入即可",
+                "糖原储备正常，高强度训练可正常补能",
+                "可安排赛中补给策略的测试",
+            ],
+            "recovery_tips": [
+                "恢复速度最快，硬课间隔可适当缩短",
+                "睡眠质量通常最好",
+                "可连续安排质量课（间隔 48h）",
+            ],
+        },
+        "ovulation": {
+            "phase_cn": "排卵期",
+            "summary": "雌激素峰值→LH 涌浪。ACL 损伤风险升至 2-3 倍，关节松弛度增加。",
+            "do": [
+                "平路稳态有氧跑",
+                "跑步机训练（平稳路面）",
+                "游泳 / 固定自行车",
+                "直线节奏跑（避免变向）",
+                "核心稳定训练（普拉提、瑜伽）",
+            ],
+            "avoid": [
+                "越野跑（不平路面 = 本体感觉挑战）",
+                "含快速变向的间歇训练",
+                "爆发力训练和弹跳训练",
+                "最大力量训练",
+                "新路线或技术性地形",
+            ],
+            "nutrition_tips": [
+                "标准饮食即可",
+                "核心温度开始升高，注意额外补水 +200mL",
+            ],
+            "recovery_tips": [
+                "额外关注膝关节和踝关节稳定性",
+                "跑后增加本体感觉训练",
+                "避免拉伸过度（关节已处于松弛状态）",
+            ],
+        },
+        "early_luteal": {
+            "phase_cn": "早期黄体期",
+            "summary": "孕酮上升，核心体温升高 +0.3°C。仍可训练但需适度调整。",
+            "do": [
+                "中等强度有氧跑",
+                "节奏跑（时长可缩短至 15-20min）",
+                "每周仍可安排 1-2 次质量课",
+                "力量训练：维持负荷，可降低组数",
+                "长距离跑（控制在 90min 以内）",
+            ],
+            "avoid": [
+                "VO2max 全量间歇（可降至 80-85% 强度）",
+                "高温环境下长距离",
+                "连续两天质量课",
+            ],
+            "nutrition_tips": [
+                "热量 +100kcal/天",
+                "碳水 +0.5g/kg/天",
+                "额外补水 +200mL",
+                "孕酮升高导致碳水氧化增加，适度增碳水",
+            ],
+            "recovery_tips": [
+                "质量课间隔增加 10-15%",
+                "核心体温升高可能影响散热，高温日注意",
+                "睡眠可能开始轻微受影响",
+            ],
+        },
+        "late_luteal": {
+            "phase_cn": "晚期黄体期",
+            "summary": "孕酮峰值→骤降，PMS 高发。RPE 显著膨胀，恢复最慢。以轻松为主。",
+            "do": [
+                "轻松有氧跑 (Z2, HR < 70% HRmax)",
+                "恢复跑和散步",
+                "轻柔瑜伽 / 拉伸",
+                "游泳（减轻关节负荷 + 缓解水肿感）",
+                "力量训练：降低负荷 20-30%，维持即可",
+            ],
+            "avoid": [
+                "VO2max 间歇训练",
+                "长距离跑 (>90min)",
+                "最大力量训练",
+                "比赛或计时测试",
+                "高温环境训练",
+            ],
+            "nutrition_tips": [
+                "热量 +200kcal/天（碳水优先）",
+                "碳水 +1.5g/kg/天",
+                "额外补水 +400mL（水钠潴留期）",
+                "镁 200-400mg/天（改善情绪和睡眠）",
+                "抗炎食物：Omega-3、姜黄、生姜",
+                "不必因体重增加（水分）恐慌——经期后自然回落",
+            ],
+            "recovery_tips": [
+                "质量课间隔增加 20-30%",
+                "睡眠目标 8-9 小时",
+                "体温偏高 +0.4°C，夜间可降低室温",
+                "RPE 膨胀 +1.0-1.5：同配速感觉更累是正常的",
+                "自我评估放宽标准，不与卵泡期表现比较",
+            ],
+        },
+    }
+    return guidance.get(phase, guidance["follicular"])
+
+
+# ============================================================
+# 10. Utility / Formatting Functions
 # ============================================================
 
 def format_pace(seconds: Union[int, float]) -> str:
@@ -1309,4 +1777,49 @@ if __name__ == "__main__":
     print(f"  get_distance_label(21.0975) = {get_distance_label(21.0975)}")
     print(f"  get_distance_label(42.195)  = {get_distance_label(42.195)}")
 
-    print(f"\n{SEP}\n  All self-tests completed successfully.\n{SEP}")
+    # --- 13. Menstrual Cycle Model ---
+    section("13. Menstrual Cycle Model")
+    # Phase detection for a 25-day cycle runner
+    phase_info = get_cycle_phase("2025-04-01", "2025-03-22", 25)
+    print(f"  Date 2025-04-01, LPS 2025-03-22, cycle 25d:")
+    print(f"    Phase: {phase_info['phase']} ({phase_info['phase_cn']})")
+    print(f"    Cycle day: {phase_info['cycle_day']}, Normalised: {phase_info['normalized_day']}")
+    assert phase_info["phase"] in ("follicular", "ovulation"), \
+        f"Expected follicular or ovulation, got {phase_info['phase']}"
+
+    # Training coefficients
+    coeff = get_cycle_training_coefficients("late_luteal", 1.0)
+    print(f"  Late-luteal coefficients: vol={coeff['volume']} int={coeff['intensity']} rpe+={coeff['rpe_adjust']}")
+    assert coeff["volume"] == 0.65 and coeff["intensity"] == 0.5
+
+    # Sensitivity=0 should neutralise everything
+    coeff_zero = get_cycle_training_coefficients("late_luteal", 0.0)
+    assert coeff_zero["volume"] == 1.0 and coeff_zero["intensity"] == 1.0 and coeff_zero["rpe_adjust"] == 0.0
+    print(f"  Sensitivity=0 check: all neutral OK")
+
+    # Nutrition adjustments for a 52 kg runner in late luteal
+    nutr = get_cycle_nutrition_adjustments("late_luteal", 52, 1.0)
+    print(f"  Late-luteal nutrition (52kg): +{nutr['extra_kcal']}kcal, +{nutr['extra_carb_g']}g carb, +{nutr['extra_water_ml']}mL water")
+    assert nutr["extra_kcal"] == 200
+    assert nutr["extra_carb_g"] == 78  # 1.5 * 52
+
+    # Week map
+    wm = get_cycle_week_map("2025-03-30", "2025-03-22", 25)
+    print(f"  Week map 3/30-4/5 (cycle 25d):")
+    for day in wm:
+        print(f"    {day['date']} {day['weekday_cn']}: D{day['cycle_day']} -> {day['phase_cn']}")
+    assert len(wm) == 7
+
+    # Phase calendar
+    cal = get_cycle_phase_calendar("2025-03-30", "2025-03-22", 25, 4)
+    print(f"  4-week phase calendar:")
+    for w in cal:
+        print(f"    W{w['week_number']}: dominant={w['dominant_phase_cn']} breakdown={w['phase_breakdown']}")
+    assert len(cal) == 4
+
+    # Guidance
+    g = get_phase_training_guidance("ovulation")
+    print(f"  Ovulation guidance: {g['summary'][:40]}...")
+    assert len(g["do"]) > 0 and len(g["avoid"]) > 0
+
+    print(f"\n{SEP}\n  All self-tests completed successfully (13 modules).\n{SEP}")
