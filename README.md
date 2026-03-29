@@ -1,24 +1,25 @@
-# Marathon Copilot — 你的 AI 马拉松配速教练
+# Marathon Copilot — 你的 AI 马拉松教练
 
-> 帮你科学备赛、精准配速、赛后复盘的智能助手。
+> 从长期训练规划到比赛日配速，再到赛后复盘——覆盖全马备赛全周期的智能助手。
 > 不用懂代码，在微信小程序上就能用。
 
 ---
 
 ## 它能帮你做什么？
 
-### 长期训练规划（NEW）
+### 长期训练规划
 
 比赛还有好几个月？Marathon Copilot 帮你设计**从今天到比赛日的完整训练周期化方案**：
 
 - 基于当前 VDOT 和目标成绩，规划 **VDOT 递进路径**（每 16 周提升 0.5-1.5 点）
 - 设计 5-6 个训练阶段：恢复期 → 有氧基础期 → 有氧发展期 → 专项期 → 巅峰期 → 减量期
-- 逐周跑量递进（严格遵守 10% 增量上限 + 每 4 周减载恢复）
+- 逐周跑量递进（严格遵守 10% 增量上限 + 每 4 周减载恢复；大体重跑者自动收紧至 8%）
 - 安排里程碑测试（5km → 10km → 半马），用来验证进步和调整计划
 - 配套力量训练、营养策略、伤病预防方案
-- 多因子达成概率精算（VDOT 缺口 × 训练年限 × 伤病 × 跑量 × 耦合比）
+- 多因子达成概率精算（VDOT 缺口 × 训练年限 × 伤病 × 跑量 × 耦合比 × 体重 × 年龄）
+- **女性跑者：** 自动预测比赛日生理周期相位，计算周期修正因子，并提供对应的赛日策略
 
-### 每周训练计划（NEW）
+### 每周训练计划
 
 长期方案落地到每一周，生成**天气自适应的 7 天训练日历**：
 
@@ -27,6 +28,7 @@
 - 每日饮食方案（碳水/蛋白质/脂肪按体重和训练阶段计算）
 - 恢复监控清单（晨脉、DOMS、疼痛量表、睡眠）+ 自动决策树
 - 力量训练课表（随训练阶段变化：关节稳定 → 跑步经济性 → 维持）
+- **女性生理周期整合**：自动叠加 5 相位周期模型（经期/卵泡期/排卵期/早期黄体期/晚期黄体期），按周期日调节训练强度、营养比例、ACL 风险预警和 RPE 膨胀修正
 
 ### 赛前：帮你定目标、出配速方案
 
@@ -147,14 +149,16 @@ Marathon Copilot 不是拍脑袋给建议，每个数字都有运动生理学依
 |------|------|
 | **跑力计算** | 基于 Jack Daniels 的 VDOT 公式，用你的 PB 反推跑力值 |
 | **训练周期化** | 基于 Daniels / Pfitzinger / Hansons 方法论的分期训练模型 |
-| **跑量递进** | 10% 周增量上限 + 每 4 周减载恢复 + 分阶段峰值控制 |
-| **环境修正** | 综合温度、湿度、风速对配速的影响，还会根据你的身高体重做个性化修正 |
+| **跑量递进** | 10% 周增量上限 + 每 4 周减载恢复 + 分阶段峰值控制（大体重跑者自动降至 8%） |
+| **耦合比分析** | 短距离 VDOT 与全马 VDOT 的比值，量化速度-耐力均衡度，指导训练侧重 |
+| **环境修正** | 综合温度、湿度、风速对配速的影响，还会根据你的身高体重（BSA/体重比）做个性化修正 |
 | **HRV 评估** | 通过心率变异性数据评估你的身体恢复状态和比赛日竞技状态 |
-| **PB 概率** | 综合跑力、训练量、环境、身体状态等多因子，估算你达成目标的概率 |
+| **PB 概率** | 综合跑力、训练量、环境、身体状态、体重、年龄等多因子，估算你达成目标的概率 |
 | **配速策略** | 支持均匀配速、后程加速、保守策略三种方案，自动生成逐公里计划 |
 | **营养计算** | 根据体重和赛前天数计算碳水/蛋白质/脂肪目标，支持糖原超补周期 |
-| **训练配速** | 基于 VDOT 推算 Easy/Marathon/Threshold 等各档训练配速 |
-| **天气自适应** | 7 天天气预报驱动训练排课，自动避开恶劣天气日 |
+| **训练配速** | 基于 VDOT 推算 Easy/Marathon/Threshold/Interval/Repetition 五档训练配速 |
+| **天气自适应** | 7 天天气预报驱动训练排课，自动避开恶劣天气日，高温日自动降速/替换交叉训练 |
+| **女性生理周期** | 5 相位周期模型（经期→卵泡期→排卵期→早期黄体期→晚期黄体期），按周期日调节训练强度系数、营养比例、ACL 风险预警和 RPE 膨胀修正。科学依据：Bruinvels et al. (2017) *BJSM*、McNulty et al. (2020) *Sports Med*、Wikström-Frisén et al. (2017) *JSCR* |
 
 ---
 
@@ -231,7 +235,7 @@ cp api-tools/training_cycle_config.example.yaml api-tools/training_cycle_config.
 
 配置文件包含：
 - **race_config.yaml**：单场比赛的赛事信息、目标成绩、配速策略、D-7 到 D-0 训练/饮食计划
-- **runner_profile.yaml**：跑者全量档案（跨赛事复用），含 PB 表、VDOT 趋势、赛事历史、伤病追踪、HRV 数据、教练洞察
+- **runner_profile.yaml**：跑者全量档案（跨赛事复用），含 PB 表、VDOT 趋势、赛事历史、伤病追踪、HRV 数据、教练洞察、女性生理周期参数（周期长度、敏感度、避孕药状态）
 - **training_cycle_config.yaml**：8-52 周训练周期架构，含阶段定义、周模板、力量训练、营养策略、天气排课规则
 
 > 注意：所有包含个人数据的配置文件（`race_config.yaml`、`runner_profile_*.yaml`、`training_cycle_config.yaml`）均已加入 `.gitignore`，不会被提交到仓库。请基于 `*.example.yaml` 创建你自己的配置。
@@ -268,19 +272,21 @@ cp api-tools/training_cycle_config.example.yaml api-tools/training_cycle_config.
 │   ├── dailyPlan/                  #   每日训练 & 饮食计划（VDOT + 营养算法）
 │   └── common/utils.js             #   核心算法库（JavaScript）
 ├── api-tools/                      # CLI 工具集
-│   ├── training_calculator.py      #   核心算法库（Python，与 utils.js 对齐 + 周期化模型）
+│   ├── training_calculator.py      #   核心算法库（Python，1800+ 行：VDOT、配速、周期化、生理周期模型）
 │   ├── generate_daily_briefing.py  #   每日简报生成器（天气 + 训练 + 饮食）
 │   ├── daily_weather_report.py     #   天气日报生成器
-│   ├── weather_client.py           #   天气 API 客户端（赛前 + 训练排课）
+│   ├── weather_client.py           #   天气 API 客户端（赛前 + 训练排课适宜度评分）
 │   ├── env_tax.py                  #   环境税计算（共享模块）
 │   ├── api_client.py               #   LLM API 客户端
 │   ├── pdf_styles.py               #   PDF 样式定义
-│   ├── runner_profile.example.yaml #   跑者档案模板（持久化个人数据）
+│   ├── run_daily_briefing.sh       #   每日简报一键运行脚本
+│   ├── run_daily_weather.sh        #   天气日报一键运行脚本
+│   ├── runner_profile.example.yaml #   跑者档案模板（含生理周期配置）
 │   ├── training_cycle_config.example.yaml  #   训练周期配置模板
 │   └── race_config.example.yaml    #   赛事配置模板
 ├── .cognition/skills/              # Devin AI Skills
-│   ├── race-plan/                  #   长期训练周期规划 Skill（NEW）
-│   ├── training-weekly/            #   每周训练计划生成 Skill（NEW）
+│   ├── race-plan/                  #   长期训练周期规划（含生理周期整合）
+│   ├── training-weekly/            #   每周训练计划生成（含每日周期叠加）
 │   ├── race-goal/                  #   赛前目标设定 Skill
 │   ├── race-review/                #   赛后复盘 Skill
 │   ├── race-weather/               #   赛前天气日报 Skill
@@ -294,10 +300,10 @@ cp api-tools/training_cycle_config.example.yaml api-tools/training_cycle_config.
 
 ## 个人数据保护
 
-- 所有跑者的个人数据（PB、体重、HRV、比赛报告等）均已通过 `.gitignore` 排除，不会上传到代码仓库
+- 所有跑者的个人数据（PB、体重、HRV、生理周期、比赛报告等）均已通过 `.gitignore` 排除，不会上传到代码仓库
 - `race_config.yaml`（含跑者真实姓名和身体数据）不会被提交；仓库中只保留脱敏后的 `race_config.example.yaml` 模板
-- `runner_profile_*.yaml`（跑者档案）和 `training_cycle_config.yaml`（训练周期配置）同样已排除
-- 生成的报告文件（`*报告/`、`*数据/`、`*天气日报*.md`、`*训练目标*.md`、`*训练计划*.md`）均已排除
+- `runner_profile_*.yaml`（跑者档案，含生理周期等敏感健康数据）和 `training_cycle_config.yaml`（训练周期配置）同样已排除
+- 生成的报告文件（`*报告/`、`*数据/`、`*天气日报*.md`、`*训练目标*.md`、`*训练计划*.md`、`*_W*_*.md`）均已排除
 - API 密钥和邮箱授权码通过 `.env` 管理，同样不会提交
 
 ## License
