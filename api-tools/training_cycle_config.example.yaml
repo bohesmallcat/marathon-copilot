@@ -1,0 +1,241 @@
+# =============================================================================
+# Training Cycle Configuration — EXAMPLE TEMPLATE
+# Copy and customize for your training cycle:
+#   cp training_cycle_config.example.yaml training_cycle_config.yaml
+#
+# IMPORTANT: training_cycle_config.yaml is gitignored.
+# This defines a multi-week periodized training plan leading to a target race.
+# =============================================================================
+
+# Link to runner profile
+runner_profile: "runner_profile_yourname.yaml"
+
+# Target race
+target_race:
+  name: "Example City Marathon 2026"
+  date: "2026-11-15"
+  distance: "full"               # "full" or "half"
+  city: "Shanghai"
+  start_time: "07:00"
+  course_notes: "Flat course, 2 turnarounds, urban with 60% building shelter"
+
+# Training cycle overview
+cycle:
+  start_date: "2026-03-30"       # First day of training
+  end_date: "2026-11-15"         # Race day
+  total_weeks: 33
+  current_week: 1                # Updated as training progresses
+
+  # VDOT progression targets
+  vdot_start: 45.0
+  vdot_target: 47.0             # Target by race day
+
+  # Volume progression
+  volume:
+    start_weekly_km: 35          # Starting weekly volume
+    peak_weekly_km: 70           # Peak volume (Phase 3)
+    recovery_week_reduction: 0.25  # 25% reduction on recovery weeks
+    max_weekly_increase: 0.10    # Never increase more than 10% per week
+    taper_reductions: [0.20, 0.40, 0.60]  # Final 3 weeks
+
+# Phase definitions (auto-calculated from total_weeks, can override)
+phases:
+  - number: 0
+    name: "Recovery"
+    name_cn: "赛后恢复期"
+    weeks: 2
+    weekly_km: [25, 30]
+    intensity: { easy: 100, tempo: 0, interval: 0, long_run: 0 }
+    hr_cap: 150
+    key_focus: "Active recovery, joint health assessment"
+    key_workouts:
+      - "Easy runs only, all below MAF HR"
+      - "Ankle/core strength assessment"
+
+  - number: 1
+    name: "Base Building"
+    name_cn: "有氧基础期"
+    weeks: 6
+    weekly_km: [35, 40, 45, 38, 48, 50]
+    intensity: { easy: 80, tempo: 0, interval: 0, long_run: 20 }
+    hr_cap: 155
+    key_focus: "Build aerobic base, increase volume safely"
+    key_workouts:
+      - "4-5 easy runs per week"
+      - "1 long run (gradually increase from 15km to 22km)"
+      - "2 strength sessions per week"
+    milestone_test:
+      week: 8
+      type: "5km_time_trial"
+      purpose: "Validate VDOT progression"
+
+  - number: 2
+    name: "Aerobic Development"
+    name_cn: "有氧发展期"
+    weeks: 6
+    weekly_km: [50, 55, 58, 48, 60, 62]
+    intensity: { easy: 70, tempo: 15, interval: 5, long_run: 10 }
+    hr_cap: 162
+    key_focus: "Develop lactate threshold, introduce tempo runs"
+    key_workouts:
+      - "1 tempo run per week (20-30min @ T-Pace)"
+      - "1 long run with last 3-5km at MP"
+      - "1 fartlek or interval session"
+      - "2-3 easy runs"
+    milestone_test:
+      week: 14
+      type: "10km_time_trial"
+      purpose: "Assess aerobic development, recalibrate paces"
+
+  - number: 3
+    name: "Marathon Specific"
+    name_cn: "马拉松专项期"
+    weeks: 8
+    weekly_km: [62, 65, 68, 55, 70, 72, 65, 58]
+    intensity: { easy: 60, tempo: 15, interval: 5, long_run: 20 }
+    hr_cap: 165
+    key_focus: "Marathon-pace work, race simulation, fueling practice"
+    key_workouts:
+      - "1 MP long run per week (25-32km with 10-15km at MP)"
+      - "1 tempo session (cruise intervals or steady tempo)"
+      - "Practice race-day nutrition on long runs"
+      - "2-3 easy runs"
+    milestone_test:
+      week: 25
+      type: "half_marathon_race"
+      purpose: "Full dress rehearsal, validate race fitness"
+
+  - number: 4
+    name: "Peak & Sharpen"
+    name_cn: "巅峰冲刺期"
+    weeks: 3
+    weekly_km: [55, 50, 45]
+    intensity: { easy: 65, tempo: 20, interval: 10, long_run: 5 }
+    hr_cap: 168
+    key_focus: "Sharpen speed, maintain fitness, reduce volume"
+    key_workouts:
+      - "Short, sharp tempo intervals"
+      - "1 reduced long run (18-20km)"
+      - "Race-pace segments"
+
+  - number: 5
+    name: "Taper"
+    name_cn: "赛前减量期"
+    weeks: 3
+    weekly_km: [38, 25, 15]
+    intensity: { easy: 80, tempo: 10, interval: 5, long_run: 5 }
+    hr_cap: 155
+    key_focus: "Rest and recover, carb loading, mental preparation"
+    key_workouts:
+      - "Week 1: Short tempo + easy runs"
+      - "Week 2: Activation runs + strides"
+      - "Week 3: Race week (D-7 to D-0 per race_config.yaml)"
+
+# Week-level template defaults per phase
+week_templates:
+  base:
+    monday: { type: "rest", notes: "Complete rest or light walk" }
+    tuesday: { type: "easy", distance_pct: 0.15, hr_cap: "E-zone" }
+    wednesday: { type: "easy", distance_pct: 0.12, hr_cap: "E-zone", strength: true }
+    thursday: { type: "easy", distance_pct: 0.15, hr_cap: "E-zone" }
+    friday: { type: "rest", notes: "Rest or cross-training" }
+    saturday: { type: "long_run", distance_pct: 0.35, hr_cap: "E-zone" }
+    sunday: { type: "easy", distance_pct: 0.12, hr_cap: "E-zone" }
+
+  aerobic_dev:
+    monday: { type: "rest" }
+    tuesday: { type: "easy", distance_pct: 0.15 }
+    wednesday: { type: "tempo", distance_pct: 0.15, quality_km: 6 }
+    thursday: { type: "easy", distance_pct: 0.12, strength: true }
+    friday: { type: "rest" }
+    saturday: { type: "long_run", distance_pct: 0.30, mp_finish_km: 5 }
+    sunday: { type: "easy", distance_pct: 0.12 }
+
+  marathon_specific:
+    monday: { type: "rest" }
+    tuesday: { type: "easy", distance_pct: 0.12 }
+    wednesday: { type: "tempo", distance_pct: 0.15, quality_km: 8 }
+    thursday: { type: "easy", distance_pct: 0.12, strength: true }
+    friday: { type: "rest" }
+    saturday: { type: "mp_long_run", distance_pct: 0.35, mp_km: 15 }
+    sunday: { type: "easy", distance_pct: 0.12 }
+
+# Strength training templates
+strength:
+  phase_0_1:
+    frequency: "2x/week"
+    focus: "Joint stability, core, ankle strength"
+    exercises:
+      - "Single-leg calf raises 3x15"
+      - "Ankle alphabet / resistance band 2x20"
+      - "Plank series 3x45s"
+      - "Single-leg squat 3x10"
+      - "Hip bridge 3x15"
+  phase_2_3:
+    frequency: "2x/week"
+    focus: "Running economy, power endurance"
+    exercises:
+      - "Bulgarian split squat 3x10"
+      - "Romanian deadlift 3x10"
+      - "Box jumps 3x8"
+      - "Core circuit (plank, side plank, dead bug)"
+      - "Calf raises with weight 3x12"
+  phase_4_5:
+    frequency: "1x/week"
+    focus: "Maintenance only, reduce load"
+    exercises:
+      - "Bodyweight squats 2x15"
+      - "Plank 2x30s"
+      - "Light calf raises 2x15"
+
+# Nutrition guidelines per phase
+nutrition:
+  base_building:
+    carb_g_per_kg: "4-5"
+    protein_g_per_kg: "1.4-1.6"
+    fat_pct: "25-30%"
+    hydration_l: "2.0-2.5"
+    notes: "Focus on recovery nutrition post-long-runs"
+  marathon_specific:
+    carb_g_per_kg: "5-7"
+    protein_g_per_kg: "1.4-1.6"
+    fat_pct: "20-25%"
+    hydration_l: "2.5-3.0"
+    notes: "Practice race-day fueling on long runs; test gels and drinks"
+  taper:
+    carb_g_per_kg: "5-6 (normal), 8-10 (carb-loading D-2/D-1)"
+    protein_g_per_kg: "1.2"
+    hydration_l: "2.0+"
+    notes: "Carb-loading starts D-2. See race_config.yaml for detailed meal plans"
+
+# Recovery monitoring thresholds
+monitoring:
+  morning_hr:
+    normal: "baseline ± 3 bpm"
+    warning: "baseline + 3-5 bpm"
+    alert: "baseline + 5+ bpm → reduce training"
+  doms:
+    method: "Stair descent / squat test"
+    normal: "No soreness or mild"
+    warning: "Moderate soreness → easy day"
+    alert: "Severe → rest day"
+  sleep:
+    target_hours: 7.5
+    minimum_hours: 7
+  injury_pain_scale:
+    green: "0-2: Continue training"
+    yellow: "3-4: Modify training, avoid aggravating"
+    orange: "5-6: Reduce volume 50%, see physio"
+    red: "7+: Stop running, medical evaluation"
+
+# Weather-adaptive scheduling rules
+weather_rules:
+  rain_threshold: 70              # Rain chance % to consider rescheduling
+  heat_threshold: 28              # °C — avoid outdoor quality sessions
+  cold_threshold: -5              # °C — indoor alternatives
+  wind_threshold: 40              # km/h — reschedule intervals
+  reschedule_priority:
+    - "Move quality sessions to better-weather days"
+    - "Never skip long run — adjust pace if needed"
+    - "Swap outdoor intervals to treadmill if necessary"
+    - "Add rest day if extreme conditions persist"

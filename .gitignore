@@ -8,6 +8,15 @@ api-tools/race_config.yaml
 api-tools/race_config_*.yaml
 !api-tools/race_config.example.yaml
 
+# ── 跑者档案（持久化个人数据） ──
+api-tools/runner_profile_*.yaml
+!api-tools/runner_profile.example.yaml
+
+# ── 训练周期配置（含个人训练参数） ──
+api-tools/training_cycle_config.yaml
+api-tools/training_cycle_config_*.yaml
+!api-tools/training_cycle_config.example.yaml
+
 # ── 个人跑者数据目录（原始截图、HRV图片等） ──
 runner_data_*/
 *数据/
@@ -23,6 +32,9 @@ runner_reports_*/
 *_目标设定*.md
 *_作战方案*.md
 *_天气日报_*.md
+*_训练目标*.md
+*_训练计划*.md
+*_W[0-9]*_*.md
 Weather_Impact_Summary_*.md
 
 # ── 个人跑者数据图片（根目录散落） ──

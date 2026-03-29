@@ -2,7 +2,11 @@
 weather_client.py — Shared weather fetching and parsing for Marathon Copilot.
 
 Consolidates wttr.in API calls with retry logic and consistent parsing.
-Used by: generate_daily_briefing.py, daily_weather_report.py, daily_weather_email.py.
+
+Used by:
+  - generate_daily_briefing.py (race-day weather briefing)
+  - daily_weather_report.py (multi-race weather report)
+  - training-weekly skill (7-day training scheduling weather)
 """
 
 import time
@@ -237,3 +241,184 @@ def extract_race_day_forecast(data, race_date):
                 "pressure": int(hourly[3]["pressure"]) if len(hourly) > 3 else 1013,
             }
     return None
+
+
+# ---------------------------------------------------------------------------
+# Parse — 7-day training scheduling weather
+# ---------------------------------------------------------------------------
+
+def parse_for_training_schedule(data):
+    """Extract 7-day weather for weekly training scheduling decisions.
+
+    Unlike race-day parsing (focused on morning race hours), this provides
+    full-day conditions relevant to flexible training scheduling:
+    - Morning window (06:00-09:00): for early runners
+    - Afternoon window (15:00-18:00): for after-work runners
+    - Overall daily rating for training suitability
+
+    Returns:
+        list of dicts (up to 3 days from wttr.in free tier), each with:
+            date, weekday, condition,
+            temp_morning, temp_afternoon, temp_min, temp_max,
+            humidity_morning, humidity_afternoon,
+            wind_kmh, wind_dir,
+            rain_chance_morning, rain_chance_afternoon, rain_chance_max,
+            uv,
+            run_rating (优/良/中/差),
+            run_rating_score (0-100),
+            best_window ("morning" / "afternoon" / "either" / "avoid"),
+            notes (list of advisory strings)
+    """
+    days = []
+    for day_data in data.get("weather", []):
+        hourly = day_data["hourly"]
+
+        # Time windows
+        morning = [h for h in hourly if int(h["time"]) in (600, 900)]
+        afternoon = [h for h in hourly if int(h["time"]) in (1500, 1800)]
+        all_hours = hourly
+
+        # Morning conditions
+        if morning:
+            temp_m = _avg_int(morning, "tempC")
+            hum_m = _avg_int(morning, "humidity")
+            rain_m = max(int(h.get("chanceofrain", 0)) for h in morning)
+        else:
+            temp_m = int(day_data["mintempC"])
+            hum_m = 50
+            rain_m = 0
+
+        # Afternoon conditions
+        if afternoon:
+            temp_a = _avg_int(afternoon, "tempC")
+            hum_a = _avg_int(afternoon, "humidity")
+            rain_a = max(int(h.get("chanceofrain", 0)) for h in afternoon)
+        else:
+            temp_a = int(day_data["maxtempC"])
+            hum_a = 50
+            rain_a = 0
+
+        rain_max = max(int(h.get("chanceofrain", 0)) for h in all_hours) if all_hours else 0
+        uv = max(int(h.get("uvIndex", 0)) for h in all_hours) if all_hours else 0
+        wind_kmh = _avg_int(morning or all_hours[:4], "windspeedKmph")
+        wind_dir = (morning or all_hours[:1] or [{"winddir16Point": "N"}])[0]["winddir16Point"]
+        desc = (morning[0]["weatherDesc"][0]["value"] if morning
+                else all_hours[3]["weatherDesc"][0]["value"] if len(all_hours) > 3
+                else "N/A")
+
+        # Compute run suitability rating
+        score, notes = _compute_run_rating(
+            temp_m, temp_a, hum_m, hum_a, rain_m, rain_a, rain_max, wind_kmh, uv,
+        )
+        best_window = _pick_best_window(temp_m, temp_a, rain_m, rain_a, wind_kmh)
+
+        if score >= 85:
+            rating = "优"
+        elif score >= 65:
+            rating = "良"
+        elif score >= 45:
+            rating = "中"
+        else:
+            rating = "差"
+
+        days.append({
+            "date": day_data["date"],
+            "condition": desc,
+            "temp_morning": temp_m,
+            "temp_afternoon": temp_a,
+            "temp_min": int(day_data["mintempC"]),
+            "temp_max": int(day_data["maxtempC"]),
+            "humidity_morning": hum_m,
+            "humidity_afternoon": hum_a,
+            "wind_kmh": wind_kmh,
+            "wind_dir": wind_dir,
+            "rain_chance_morning": rain_m,
+            "rain_chance_afternoon": rain_a,
+            "rain_chance_max": rain_max,
+            "uv": uv,
+            "run_rating": rating,
+            "run_rating_score": score,
+            "best_window": best_window,
+            "notes": notes,
+        })
+
+    return days
+
+
+def _avg_int(hours, key):
+    """Average of an integer field across hourly entries."""
+    vals = [int(h[key]) for h in hours]
+    return round(sum(vals) / len(vals)) if vals else 0
+
+
+def _compute_run_rating(temp_m, temp_a, hum_m, hum_a, rain_m, rain_a, rain_max, wind_kmh, uv):
+    """Score 0-100 for overall training suitability + advisory notes."""
+    score = 100
+    notes = []
+
+    # Temperature scoring (best: 5-15°C morning)
+    best_temp = temp_m
+    if best_temp > 28:
+        score -= 30
+        notes.append("高温警告：建议室内或清晨训练")
+    elif best_temp > 22:
+        score -= 15
+        notes.append("偏热：降低强度，注意补水")
+    elif best_temp > 15:
+        score -= 5
+    elif best_temp < -5:
+        score -= 25
+        notes.append("严寒：考虑室内替代训练")
+    elif best_temp < 0:
+        score -= 10
+        notes.append("低温：注意保暖，延长热身")
+
+    # Rain scoring
+    if rain_max >= 80:
+        score -= 25
+        notes.append("大概率降雨：建议调整训练日")
+    elif rain_max >= 50:
+        score -= 10
+        notes.append("有降雨风险：备好替代方案")
+
+    # Humidity scoring
+    avg_hum = (hum_m + hum_a) / 2
+    if avg_hum > 85:
+        score -= 15
+        notes.append("高湿度：心率易漂移，降低配速目标")
+    elif avg_hum > 75:
+        score -= 5
+
+    # Wind scoring
+    if wind_kmh > 40:
+        score -= 20
+        notes.append("强风：不适合间歇训练，建议避风路线")
+    elif wind_kmh > 25:
+        score -= 5
+
+    # UV scoring
+    if uv >= 8:
+        score -= 10
+        notes.append("紫外线极强：戴帽+防晒，避开 10:00-14:00")
+    elif uv >= 6:
+        score -= 5
+        notes.append("紫外线较强：注意防晒")
+
+    return max(score, 0), notes
+
+
+def _pick_best_window(temp_m, temp_a, rain_m, rain_a, wind_kmh):
+    """Recommend best time window for running."""
+    m_ok = rain_m < 50 and 0 <= temp_m <= 25
+    a_ok = rain_a < 50 and 0 <= temp_a <= 25
+
+    if not m_ok and not a_ok:
+        return "avoid"
+    if m_ok and a_ok:
+        # Prefer cooler window
+        if abs(temp_m - 10) <= abs(temp_a - 10):
+            return "either"  # morning slightly better but both fine
+        return "either"
+    if m_ok:
+        return "morning"
+    return "afternoon"
