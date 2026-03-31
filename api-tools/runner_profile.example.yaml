@@ -1,0 +1,185 @@
+# =============================================================================
+# Runner Profile — EXAMPLE TEMPLATE
+# Copy to runner_profile_{nickname}.yaml and fill in your actual data:
+#   cp runner_profile.example.yaml runner_profile_yourname.yaml
+#
+# IMPORTANT: runner_profile_*.yaml is gitignored (contains personal data).
+# This file serves as the schema reference and example.
+# =============================================================================
+
+runner:
+  nickname: "YourNickname"        # Runner ID used across all reports
+  gender: "M/F"                   # M or F
+  birth_year: 1990                # For age-grading calculations
+  weight_kg: 65                   # Current weight
+  height_cm: 170                  # Height
+  bsa: 1.756                     # Auto-calculated: 0.007184 * height^0.725 * weight^0.425
+  bsa_weight_ratio: 0.0270       # bsa / weight_kg
+  body_correction: 1.00          # Reference(0.0270) / personal ratio
+  resting_hr: 50                 # Resting heart rate (bpm)
+  max_hr: 190                    # Maximum heart rate (bpm)
+  lactate_threshold_hr: 175      # Lactate threshold heart rate
+
+# Personal Best records — keep all PBs with VDOT for trend tracking
+pb_records:
+  - distance: "5km"
+    time: "22:30"
+    date: "2025-11-15"
+    race: "Example Parkrun"
+    vdot: 45.2
+    conditions: "15°C, 50% humidity, calm"
+
+  - distance: "10km"
+    time: "47:00"
+    date: "2025-12-01"
+    race: "Example 10K"
+    vdot: 45.5
+    conditions: "12°C, 55% humidity"
+
+  - distance: "half"
+    time: "1:45:00"
+    date: "2026-01-10"
+    race: "Example Half Marathon"
+    vdot: 44.8
+    conditions: "10°C, 60% humidity"
+
+  # Full marathon PBs
+  - distance: "full"
+    time: "3:45:00"
+    date: "2025-11-01"
+    race: "Example City Marathon"
+    vdot: 43.5
+    conditions: "18°C, 65% humidity, windy"
+    notes: "Positive split, HR drift after 30km"
+
+# Race history archive (including non-PB races for pattern analysis)
+race_archive:
+  - date: "2025-11-01"
+    race: "Example City Marathon"
+    distance: "full"
+    gps_time: "3:45:00"
+    official_time: "3:45:15"
+    avg_hr: 168
+    max_hr: 182
+    avg_pace: "5'19\"/km"
+    te_aerobic: 5.0
+    te_anaerobic: 2.5
+    temperature: "18°C"
+    humidity: "65%"
+    notes: "Positive split after 30km, HR drifted from 165 to 178"
+    coros_data: true     # Whether COROS/Garmin detailed data is available
+    split_pattern: "positive"  # positive / negative / even
+
+  - date: "2026-01-10"
+    race: "Example Half Marathon"
+    distance: "half"
+    gps_time: "1:45:00"
+    official_time: "1:45:12"
+    avg_hr: 172
+    max_hr: 180
+    avg_pace: "4'58\"/km"
+    te_aerobic: 4.5
+    te_anaerobic: 2.8
+    temperature: "10°C"
+    humidity: "60%"
+    notes: "Even pacing, good execution"
+    coros_data: true
+    split_pattern: "even"
+
+# VDOT progression tracking
+vdot_history:
+  current: 45.0                  # Current effective VDOT (median of recent PBs)
+  target: 47.0                   # Training target VDOT
+  progression:
+    - date: "2025-06-01"
+      vdot: 42.0
+      source: "10km PB 50:00"
+    - date: "2025-11-01"
+      vdot: 43.5
+      source: "Full marathon 3:45:00"
+    - date: "2026-01-10"
+      vdot: 45.0
+      source: "Half marathon 1:45:00"
+
+# Current training state
+training_state:
+  recent_4week_avg_km: 45        # Average weekly km over last 4 weeks
+  recent_long_run:
+    distance_km: 18
+    pace: "5'30\"/km"
+    date: "2026-03-15"
+  recent_speed_session:
+    content: "6x800m @ 3'50\"/km"
+    date: "2026-03-12"
+  training_age_years: 3          # How many years of structured running
+  current_phase: "base_building" # recovery / base_building / aerobic_dev / race_specific / taper
+
+# Injury & health tracking
+health:
+  current_injuries:
+    - area: "right_ankle"
+      severity: 2                # 0-10 pain scale
+      since: "2026-02-01"
+      notes: "Mild pronation-related discomfort, improving"
+  injury_history:
+    - area: "left_hamstring"
+      period: "2025-08-01 to 2025-09-15"
+      severity_peak: 5
+      resolution: "Physiotherapy + eccentric exercises"
+  chronic_conditions: []         # e.g., "plantar_fasciitis_history"
+
+# Female physiology — menstrual cycle tracking (optional, female runners)
+# Set enabled: false or omit this section entirely for male runners or
+# runners on hormonal contraceptives that suppress the natural cycle.
+menstrual_cycle:
+  enabled: false                 # true to activate cycle-aware training
+  cycle_length: 28               # Average cycle length in days (typical 25-35)
+  last_period_start: "2026-03-01" # First day of most recent period (YYYY-MM-DD)
+  sensitivity: 1.0               # Individual sensitivity to cycle effects (0.0-2.0)
+                                 #   0.0 = no effect observed / disabled
+                                 #   1.0 = standard (literature defaults)
+                                 #   1.5 = high sensitivity (symptoms pronounced)
+                                 #   2.0 = very high sensitivity
+  contraceptive: "none"          # "none" / "combined_pill" / "progestin_pill" /
+                                 # "hormonal_iud" / "copper_iud" / "implant" / "other"
+                                 # Hormonal types → cycle periodization auto-disabled
+  menstruation_days: 5           # Typical duration of period (days)
+  flow_intensity: "normal"       # "light" / "normal" / "heavy" (affects iron advice)
+  known_symptoms:                # Self-reported symptoms to personalise guidance
+    pms_severity: "mild"         # "none" / "mild" / "moderate" / "severe"
+    cramps: "mild"               # "none" / "mild" / "moderate" / "severe"
+    sleep_disruption: false      # true if luteal-phase sleep is noticeably worse
+    mood_swings: false           # true if mood changes affect training motivation
+  ferritin_last_check:
+    value: 45                    # ng/mL — target ≥ 30 for female runners
+    date: "2026-02-15"
+    notes: "Within normal range"
+
+# HRV data (if available from COROS/Garmin/Apple Watch)
+hrv:
+  device: "COROS"                # COROS / Garmin / Apple Watch / other
+  baseline_30day_avg: 65         # ms (or ln(rMSSD) if device provides that)
+  baseline_sd: 8                 # Standard deviation
+  recent_7day: [62, 68, 65, 70, 63, 67, 72]  # Last 7 days values
+  unit: "ms"                     # ms or ln_rmssd
+
+# Speed-endurance coupling analysis
+coupling:
+  ratio: 0.97                   # full_vdot / 10k_vdot (or half_vdot / 10k_vdot)
+  type: "balanced"              # speed_strong / balanced / endurance_strong
+  notes: "Good speed-endurance coupling"
+
+# Key findings from race analysis (accumulated insights)
+coaching_insights:
+  strengths:
+    - "Consistent even pacing in half marathon"
+    - "Strong aerobic base (TE aerobic consistently 4.5-5.0)"
+  weaknesses:
+    - "HR drift in full marathon after 30km"
+    - "Heat sensitivity: performance drops significantly above 18°C"
+  patterns:
+    - "Best performances in 8-15°C temperature range"
+    - "Positive splitting tendency in full marathon"
+  recommendations:
+    - "Focus on marathon-pace long runs to address late-race fade"
+    - "Practice heat acclimatization for warmer races"

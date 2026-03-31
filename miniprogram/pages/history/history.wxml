@@ -1,0 +1,54 @@
+<view class="container">
+  <view class="section-title">我的报告</view>
+
+  <!-- Tab bar -->
+  <view class="tabs">
+    <view class="tab {{activeTab === 0 ? 'tab-active' : ''}}" bindtap="onTabChange" data-tab="0">全部</view>
+    <view class="tab {{activeTab === 1 ? 'tab-active' : ''}}" bindtap="onTabChange" data-tab="1">目标设定</view>
+    <view class="tab {{activeTab === 2 ? 'tab-active' : ''}}" bindtap="onTabChange" data-tab="2">赛后复盘</view>
+  </view>
+
+  <!-- Loading -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-text">加载中...</view>
+  </view>
+
+  <!-- Empty state -->
+  <view class="empty-state" wx:if="{{!loading && empty}}">
+    <view class="empty-text">还没有报告</view>
+    <view class="empty-actions">
+      <button class="btn-primary" style="margin-top: 32rpx;" bindtap="goToRaceGoal">创建赛前目标</button>
+      <button class="btn-secondary" style="margin-top: 16rpx;" bindtap="goToRaceReview">创建赛后复盘</button>
+    </view>
+  </view>
+
+  <!-- Report list -->
+  <block wx:if="{{!loading && !empty}}">
+    <view class="report-card card"
+      wx:for="{{reports}}"
+      wx:key="_id"
+      wx:if="{{activeTab === 0 || (activeTab === 1 && item.type === 'race-goal') || (activeTab === 2 && item.type === 'race-review')}}"
+      bindtap="goToReport"
+      data-id="{{item._id}}">
+
+      <view class="report-header">
+        <view class="tag {{item.typeClass}}">{{item.typeLabel}}</view>
+        <view class="report-date">{{item.createdAt}}</view>
+      </view>
+
+      <view class="report-title">
+        {{item.race.name || item.prePlan.raceName || '比赛报告'}}
+      </view>
+
+      <view class="report-meta-row">
+        <text class="report-runner">{{item.runner.name}}</text>
+        <text class="report-target" wx:if="{{item.race.targetTime}}">目标 {{item.race.targetTime}}</text>
+        <text class="report-target" wx:if="{{item.actual.finishTime}}">实际 {{item.actual.finishTime}}</text>
+      </view>
+
+      <view class="report-odds" wx:if="{{item.preCalc && item.preCalc.pbOdds}}">
+        PB胜算 {{item.preCalc.pbOdds.odds}}%
+      </view>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,64 @@
+<view class="container">
+  <!-- Hero Section -->
+  <view class="hero card">
+    <view class="hero-title">Marathon Copilot</view>
+    <view class="hero-subtitle">AI 马拉松配速教练</view>
+    <view class="hero-desc">基于运动生理学的智能赛前目标设定与赛后深度复盘</view>
+  </view>
+
+  <!-- Profile Card -->
+  <view class="card" wx:if="{{hasProfile && runner}}">
+    <view class="profile-header">
+      <view class="profile-avatar">{{runner.name[0] || 'R'}}</view>
+      <view class="profile-info">
+        <view class="profile-name">{{runner.name}}</view>
+        <view class="profile-meta">VDOT {{runner.vdot || '--'}} | {{runner.weight}}kg / {{runner.height}}cm</view>
+      </view>
+      <view class="profile-edit" bindtap="goToProfile">编辑</view>
+    </view>
+  </view>
+
+  <view class="card setup-card" wx:else bindtap="goToProfile">
+    <view class="setup-icon">+</view>
+    <view class="setup-text">创建跑者档案</view>
+    <view class="setup-hint">填写体重、身高、PB等数据，开启AI分析</view>
+  </view>
+
+  <!-- Quick Actions -->
+  <view class="section-title">核心功能</view>
+
+  <view class="action-grid">
+    <view class="action-card card" bindtap="goToRaceGoal">
+      <view class="action-icon action-icon-goal">G</view>
+      <view class="action-title">赛前目标设定</view>
+      <view class="action-desc">VDOT锚定 + 环境税精算 + PB概率评估 + 逐公里配速方案</view>
+    </view>
+
+    <view class="action-card card" bindtap="goToRaceReview">
+      <view class="action-icon action-icon-review">R</view>
+      <view class="action-title">赛后深度复盘</view>
+      <view class="action-desc">偏差分解 + 根因链分析 + 能力重估 + 下场建议</view>
+    </view>
+
+    <view class="action-card card" bindtap="goToDailyPlan">
+      <view class="action-icon action-icon-plan">P</view>
+      <view class="action-title">每日训练 & 饮食</view>
+      <view class="action-desc">赛前倒计时训练计划 + 碳水负荷饮食方案 + 恢复监控</view>
+    </view>
+  </view>
+
+  <!-- Recent Reports -->
+  <view class="section-title" wx:if="{{recentReports.length > 0}}">最近报告</view>
+  <view class="card report-item" wx:for="{{recentReports}}" wx:key="_id" bindtap="goToReport" data-id="{{item._id}}">
+    <view class="report-type tag {{item.type === 'race-goal' ? 'tag-info' : 'tag-warning'}}">
+      {{item.type === 'race-goal' ? '目标设定' : '赛后复盘'}}
+    </view>
+    <view class="report-title">{{item.race.name || item.prePlan.raceName || '比赛报告'}}</view>
+    <view class="report-meta">{{item.runner.name}}</view>
+  </view>
+
+  <!-- Loading -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-text">加载中...</view>
+  </view>
+</view>

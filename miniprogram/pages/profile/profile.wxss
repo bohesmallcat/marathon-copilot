@@ -1,0 +1,29 @@
+.form-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.form-half {
+  flex: 1;
+}
+
+.form-flex {
+  flex: 1;
+}
+
+.date-picker {
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0 24rpx;
+  background: #F8F9FA;
+  border: 2rpx solid var(--border);
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  color: var(--text-hint);
+  min-width: 180rpx;
+  text-align: center;
+}
+
+.save-btn {
+  margin: 32rpx 0 60rpx;
+}

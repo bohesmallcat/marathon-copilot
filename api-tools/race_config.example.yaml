@@ -1,0 +1,260 @@
+# =============================================================================
+# Marathon Race Configuration — EXAMPLE TEMPLATE
+# Copy to race_config.yaml and fill in your actual runner data:
+#   cp race_config.example.yaml race_config.yaml
+#
+# IMPORTANT: race_config.yaml is gitignored (contains personal data).
+# =============================================================================
+
+race:
+  name: "202X XX城市半程马拉松"
+  name_en: "202X Example City Half Marathon"
+  date: "202X-XX-XX"
+  start_time: "07:00"
+  city: ExampleCity
+  city_cn: XX城市
+  distance_km: 21.0975
+  gps_distance_km: 21.35
+  is_full: false
+  course_notes: "城区赛道，遮挡率约 60%，开阔段约 3.5km"
+
+runner:
+  name: YourName              # 替换为你的昵称
+  weight_kg: 60               # 体重 (kg)
+  height_cm: 170              # 身高 (cm)
+  bsa: 1.70                   # 体表面积 (m²), 可用公式自动算
+  body_correction: 1.00       # 体型散热修正系数 (越小越容易散热)
+  pb: "1:35:00"               # 当前半马 PB
+  pb_315: ""                  # 最近一场参考赛 PB (可空)
+  tpace: "4'10\""             # 乳酸阈值配速
+  tpace_bpm: 175              # T-Pace 对应心率
+  reserve_per_km: 18          # 速度储备 (秒/km)
+  plans:
+    a: { time: "1:33:00", pace: "4'24\"/km", gps_pace: "4'22\"/km" }
+    b: { time: "1:34:00", pace: "4'26\"/km", gps_pace: "4'25\"/km" }
+    c: { time: "1:35:30", pace: "4'29\"/km", gps_pace: "4'28\"/km" }
+
+# Baseline weather assumptions from battle plan
+baseline:
+  weather: "晴 (Sunny)"
+  temp_start: 10.0
+  temp_end: 15.0
+  humidity: 45
+  wind_mph: 8
+  wind_kmh: 13
+  wind_dir: 北
+  rain_chance: 5
+  uv: 7
+  env_tax:
+    total: 15
+    wind: 2
+    humidity: 0
+    temp: 0
+    uv: 5
+    turnaround: 8
+
+# Environment tax model parameters
+env_tax_model:
+  optimal_temp_low: 5       # °C
+  optimal_temp_high: 15     # °C
+  humidity_drift_threshold: 70  # %
+  wind_penalty_per_mph: 0.5    # seconds/km per mph
+  crosswind_coeff: 0.50
+  urban_shelter_reduction: 0.40  # 60% shelter -> 40% effective
+  exposed_km: 3.5
+  turnaround_tax: 8             # fixed seconds
+
+# Signal thresholds (env tax change from baseline)
+signal:
+  green: 10     # < ±10" = plan valid
+  yellow: 30    # 10-30" = minor adjustments
+  orange: 60    # 30-60" = consider downgrade
+
+# ---------------------------------------------------------------------------
+# Training plans (keyed by D-N days before race)
+# Customize to your own training schedule.
+# ---------------------------------------------------------------------------
+training:
+  4:
+    phase: "Taper 减量期"
+    workout: 轻松跑
+    distance: "5km @ 轻松配速"
+    rpe: "RPE 4"
+    hr_cap: "< 心率区间2上限"
+    gear: 日常训练鞋
+    details: "维持跑感，Taper 减量期不追速。"
+    post_run:
+      - "泡沫轴放松 10min"
+      - "拉伸 15min"
+    arch_training: 按需
+
+  3:
+    phase: 赛前激活
+    workout: "赛前开腿跑（醒腿）"
+    distance: "5km 总量：2km 热身 + 4x200m 快跑 + 1.5km 放松"
+    rpe: "RPE 5-6"
+    hr_cap: "200m 间歇可至 T-Pace 心率"
+    gear: 日常训练鞋
+    details: >-
+      赛前最后一次有速度的训练。200m 间歇调动快肌纤维，
+      速度快于比赛配速但距离极短，不产生疲劳。
+    post_run:
+      - "泡沫轴放松 10min"
+      - "拉伸 15min"
+    arch_training: 按需
+
+  2:
+    phase: "Taper + 碳水负荷"
+    workout: "完全休息（散步可）"
+    distance: 0km
+    rpe: "—"
+    hr_cap: "—"
+    gear: "—"
+    details: >-
+      赛前 2 天，完全休息让身体超量恢复。碳水负荷启动日，
+      全力吃碳水：白米饭、面条、面包、果汁。
+    post_run:
+      - "轻度拉伸 10min"
+    arch_training: 减半
+
+  1:
+    phase: 赛前最终准备
+    workout: 极轻松抖腿跑
+    distance: "2km @ 慢跑 + 2x100m 大步跑"
+    rpe: "RPE 2-3"
+    hr_cap: "< 心率区间1上限"
+    gear: 日常训练鞋
+    details: >-
+      仅为保持跑感和神经激活。100m 大步跑感受一下身体弹性。
+      22:00 前入睡。
+    post_run:
+      - "检查比赛装备清单"
+    arch_training: 减半
+    extra: |
+      **装备检查清单：**
+      - [ ] 竞速跑鞋（已测试确认）
+      - [ ] 号码布 + 安全别针
+      - [ ] 手表充电至 100%
+      - [ ] 能量胶 x2（赛前 + 赛中）
+      - [ ] 帽子/遮阳帽
+      - [ ] 凡士林/Body Glide
+      - [ ] 短袖 + 短裤
+      - [ ] 赛后换洗衣物
+
+  0:
+    phase: 比赛日
+    workout: "比赛"
+    distance: 21.0975km
+    rpe: 全力
+    hr_cap: 按配速表执行
+    gear: "竞速跑鞋 + 凡士林"
+    details: >-
+      04:30 起床 → 05:00 早餐 → 06:00 到达起点 →
+      06:30 热身慢跑 10min + 动态拉伸 → 06:50 进入出发区 → 07:00 起跑
+    post_run: []
+    arch_training: 不做
+
+# ---------------------------------------------------------------------------
+# Diet plans (keyed by D-N)
+# Carb/protein targets are based on runner weight.
+# ---------------------------------------------------------------------------
+diet:
+  4:
+    phase: 正常训练期
+    carb_target: "5-6g/kg 体重"
+    protein_target: "1.2g/kg 体重"
+    water: "1.5-2L"
+    meals:
+      早餐: "粥/面包 + 鸡蛋 + 牛奶"
+      午餐: "米饭 + 瘦肉/鱼 + 蔬菜"
+      训练前: "香蕉 1 根 或 能量棒（跑前 30min）"
+      晚餐: "面条/米饭 + 蛋白质 + 蔬菜"
+    notes:
+      - "不需要碳水负荷，保持正常饮食"
+      - "避免尝试新食物"
+      - "少油少辛辣，减少肠胃负担"
+
+  3:
+    phase: "正常训练期（最后一天）"
+    carb_target: "5-6g/kg 体重"
+    protein_target: "1.2g/kg 体重"
+    water: "1.5-2L"
+    meals:
+      早餐: "粥/面包 + 鸡蛋 + 牛奶"
+      午餐: "米饭 + 瘦肉/鱼 + 蔬菜"
+      训练后: "巧克力牛奶或香蕉+酸奶（30min 内）"
+      晚餐: "面条/米饭 + 蛋白质 + 蔬菜"
+    notes:
+      - "明天开始碳水负荷，今天正常吃"
+      - "训练后及时补充碳水+蛋白"
+
+  2:
+    phase: "碳水负荷 Day 1"
+    carb_target: "8-10g/kg 体重"
+    protein_target: "1.0g/kg 体重"
+    water: "2L+"
+    meals:
+      早餐: "大碗白粥 + 馒头/面包 + 果酱 + 果汁"
+      午餐: "大碗米饭（300g+）+ 少量瘦肉 + 蔬菜"
+      下午加餐: "香蕉 2 根 + 运动饮料 500ml"
+      晚餐: "大碗面条/米饭 + 面包"
+      睡前: "果汁 200ml 或 蜂蜜水"
+    notes:
+      - "**碳水负荷启动！**"
+      - "以米饭、面条、面包、果汁、香蕉为主"
+      - "蛋白质适当降低，把胃的空间留给碳水"
+      - "少量多餐，避免单次吃太撑"
+
+  1:
+    phase: "碳水负荷 Day 2"
+    carb_target: "8-10g/kg 体重"
+    protein_target: "1.0g/kg 体重"
+    water: "2L+"
+    meals:
+      早餐: "大碗白粥/面条 + 面包 + 果汁"
+      午餐: "大碗米饭（300g+）+ 少量瘦肉"
+      下午加餐: "香蕉 + 能量棒 + 运动饮料"
+      晚餐: "面条/米饭 + 面包 — **最晚 19:00 吃完**"
+    notes:
+      - "碳水负荷第二天，继续高碳水饮食"
+      - "**晚餐最晚 19:00 完成**"
+      - "**22:00 前入睡**"
+
+  0:
+    phase: 比赛日
+    carb_target: "赛前早餐 2-2.5g/kg"
+    protein_target: 低
+    water: "300ml（早餐时）"
+    meals:
+      "04:30 早餐": "白米饭/面包 + 果酱（高碳水低纤维）"
+      "05:00": "100-150mg 咖啡因（可选）"
+      "赛前 10min": "能量胶 1 支 + 100ml 水"
+      "赛中每5km": "100-150ml 运动饮料/水"
+      "赛中10km": "能量胶 1 支（关键补给点）"
+    notes:
+      - "严格复制已验证的赛前餐方案"
+      - "起床后立即喝 200ml 温水"
+      - "不吃任何赛前没吃过的东西"
+
+# Recovery monitoring checklist
+recovery_checklist:
+  晨脉: "起床后卧床测量，应回到基线 ± 3bpm"
+  伤病: "0-10 疼痛量表，若有伤病需记录"
+  DOMS: "下楼梯/蹲起测试，应无明显酸痛"
+  睡眠: "目标 7+ 小时"
+
+# Pace table — customize to your own race strategy
+pace_table:
+  splits:
+    - "[0-5k]  按计划配速起跑，心率克制"
+    - "[6-12k] 巡航区间，10km补胶"
+    - "[13-18k] 匀速推进"
+    - "[19k-F] 视体感释放"
+  fuse_rules:
+    - "熔断：前半程HR超限 → 降至 Plan B"
+    - "伤病：疼痛持续2km → 降速保护"
+
+# Output paths (can be overridden by environment variables)
+paths:
+  reports_local: "./reports"
+  reports_onedrive: ""  # 填入你的 OneDrive 同步目录（可留空）

@@ -1,0 +1,9 @@
+{
+  "name": "dailyPlan",
+  "version": "1.0.0",
+  "description": "每日训练+饮食计划 - 基于D-N倒计时",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

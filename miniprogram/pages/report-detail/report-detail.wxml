@@ -1,0 +1,87 @@
+<view class="container">
+  <!-- Loading -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-text">加载报告中...</view>
+  </view>
+
+  <block wx:if="{{!loading && report}}">
+    <!-- Header -->
+    <view class="report-header card">
+      <view class="tag {{reportType === 'race-goal' ? 'tag-info' : 'tag-warning'}}">
+        {{reportType === 'race-goal' ? '目标设定' : '赛后复盘'}}
+      </view>
+      <view class="report-runner">{{report.runner.name}}</view>
+      <view class="report-race">{{report.race.name || report.prePlan.raceName}}</view>
+    </view>
+
+    <!-- Pre-calc Summary -->
+    <view class="card" wx:if="{{preCalc && preCalc.pbOdds}}">
+      <view class="card-title">核心数据</view>
+      <view class="stat-row">
+        <text class="stat-label">PB 胜算</text>
+        <text class="stat-value" style="color: #E94560; font-size: 32rpx;">{{preCalc.pbOdds.odds}}%</text>
+      </view>
+      <view class="stat-row">
+        <text class="stat-label">当前 VDOT</text>
+        <text class="stat-value">{{preCalc.currentVDOT}}</text>
+      </view>
+      <view class="stat-row">
+        <text class="stat-label">目标 VDOT</text>
+        <text class="stat-value">{{preCalc.targetVDOT}}</text>
+      </view>
+      <view class="stat-row">
+        <text class="stat-label">环境税</text>
+        <text class="stat-value">{{preCalc.envTax.total}}"</text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{preCalc && preCalc.deviation !== undefined}}">
+      <view class="card-title">核心数据</view>
+      <view class="stat-row">
+        <text class="stat-label">总偏差</text>
+        <text class="stat-value" style="color: {{preCalc.deviation > 0 ? '#E74C3C' : '#27AE60'}};">
+          {{preCalc.deviation > 0 ? '+' : ''}}{{preCalc.deviation}}"
+        </text>
+      </view>
+      <view class="stat-row">
+        <text class="stat-label">实际 VDOT</text>
+        <text class="stat-value">{{preCalc.actualVDOT}}</text>
+      </view>
+      <view class="stat-row">
+        <text class="stat-label">实际环境税</text>
+        <text class="stat-value">{{preCalc.actualEnvTax.total}}"</text>
+      </view>
+    </view>
+
+    <!-- Report content (markdown rendered) -->
+    <view class="card report-content">
+      <block wx:for="{{reportNodes}}" wx:key="index">
+        <view wx:if="{{item.type === 'h1'}}" class="h1">{{item.text}}</view>
+        <view wx:elif="{{item.type === 'h2'}}" class="h2">{{item.text}}</view>
+        <view wx:elif="{{item.type === 'h3'}}" class="h3">{{item.text}}</view>
+        <view wx:elif="{{item.type === 'paragraph'}}" class="paragraph">{{item.text}}</view>
+        <view wx:elif="{{item.type === 'blockquote'}}" class="blockquote blockquote-{{item.variant}}">{{item.text}}</view>
+        <view wx:elif="{{item.type === 'list-item'}}" class="list-item">
+          <view class="list-bullet"></view>
+          <text>{{item.text}}</text>
+        </view>
+        <view wx:elif="{{item.type === 'table'}}" class="table-wrapper">
+          <view class="table">
+            <view class="tr">
+              <view class="th" wx:for="{{item.headers}}" wx:for-item="header" wx:key="*this">{{header}}</view>
+            </view>
+            <view class="tr {{rowIdx % 2 === 0 ? '' : 'tr-even'}}" wx:for="{{item.rows}}" wx:for-item="row" wx:for-index="rowIdx" wx:key="rowIdx">
+              <view class="td" wx:for="{{row}}" wx:for-item="cell" wx:key="*this">{{cell}}</view>
+            </view>
+          </view>
+        </view>
+        <view wx:elif="{{item.type === 'code-start'}}" class="code-block">{{item.text}}</view>
+      </block>
+    </view>
+
+    <!-- Actions -->
+    <view class="actions">
+      <button class="btn-primary" open-type="share">分享报告</button>
+    </view>
+  </block>
+</view>

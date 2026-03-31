@@ -1,0 +1,72 @@
+.report-header {
+  text-align: center;
+  padding: 40rpx 32rpx;
+}
+
+.report-runner {
+  font-size: 36rpx;
+  font-weight: 700;
+  margin-top: 16rpx;
+  color: var(--secondary);
+}
+
+.report-race {
+  font-size: 28rpx;
+  color: var(--text-secondary);
+  margin-top: 8rpx;
+}
+
+.list-item {
+  padding: 4rpx 0 4rpx 32rpx;
+  position: relative;
+  font-size: 28rpx;
+  line-height: 1.8;
+}
+
+.list-bullet {
+  position: absolute;
+  left: 8rpx;
+  top: 18rpx;
+  width: 10rpx;
+  height: 10rpx;
+  background: var(--primary);
+  border-radius: 50%;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  margin: 16rpx 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  min-width: 100%;
+  font-size: 22rpx;
+}
+
+.tr {
+  display: flex;
+}
+
+.th {
+  flex: 1;
+  min-width: 120rpx;
+  padding: 16rpx 12rpx;
+  background: var(--secondary);
+  color: #FFFFFF;
+  font-weight: 600;
+  text-align: left;
+}
+
+.td {
+  flex: 1;
+  min-width: 120rpx;
+  padding: 12rpx;
+  border-bottom: 1rpx solid var(--border);
+}
+
+.tr-even { background: #F8F9FA; }
+
+.actions {
+  padding: 32rpx 0 60rpx;
+}

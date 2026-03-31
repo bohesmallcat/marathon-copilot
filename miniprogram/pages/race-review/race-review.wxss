@@ -1,0 +1,32 @@
+.steps { display: flex; align-items: center; justify-content: center; padding: 24rpx 0 32rpx; }
+.step { display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
+.step-num { width: 48rpx; height: 48rpx; border-radius: 50%; background: #E8E8E8; color: #999; font-size: 24rpx; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.step-active .step-num { background: var(--primary); color: #FFFFFF; }
+.step-label { font-size: 20rpx; color: var(--text-hint); }
+.step-active .step-label { color: var(--primary); font-weight: 500; }
+.step-line { width: 80rpx; height: 4rpx; background: #E8E8E8; margin: 0 8rpx; margin-bottom: 28rpx; }
+.step-line-active { background: var(--primary); }
+
+.form-row { display: flex; gap: 16rpx; }
+.form-half { flex: 1; }
+.picker-display { display: flex; align-items: center; color: var(--text-secondary); }
+
+.btn-row { display: flex; gap: 16rpx; margin-top: 16rpx; }
+.btn-half { flex: 1; }
+
+.generating-container { display: flex; flex-direction: column; align-items: center; padding: 120rpx 48rpx; }
+.pulse-dot { width: 40rpx; height: 40rpx; background: var(--primary); border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; margin-bottom: 32rpx; }
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } }
+.generating-title { font-size: 34rpx; font-weight: 600; margin-bottom: 32rpx; }
+.generating-steps { display: flex; flex-direction: column; gap: 16rpx; }
+.gen-step { font-size: 26rpx; color: var(--text-secondary); padding-left: 24rpx; position: relative; }
+.gen-step::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 12rpx; height: 12rpx; background: var(--primary); border-radius: 50%; }
+.generating-hint { font-size: 22rpx; color: var(--text-hint); margin-top: 48rpx; }
+
+.result-hero { display: flex; gap: 32rpx; align-items: center; }
+.deviation-display { text-align: center; min-width: 180rpx; }
+.deviation-value { font-size: 48rpx; font-weight: 800; }
+.deviation-slow { color: var(--danger); }
+.deviation-fast { color: var(--success); }
+.deviation-label { font-size: 24rpx; color: var(--text-secondary); margin-top: 4rpx; }
+.result-stats { flex: 1; }

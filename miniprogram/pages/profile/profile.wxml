@@ -1,0 +1,115 @@
+<view class="container">
+  <view class="section-title">{{isEdit ? '编辑' : '创建'}}跑者档案</view>
+
+  <!-- 基础信息 -->
+  <view class="card">
+    <view class="card-title">基础信息</view>
+
+    <view class="form-group">
+      <text class="form-label">昵称 <text class="required">*</text></text>
+      <input class="form-input" placeholder="你的跑步昵称" value="{{name}}" bindinput="onInput" data-field="name" />
+    </view>
+
+    <view class="form-row">
+      <view class="form-group form-half">
+        <text class="form-label">体重(kg) <text class="required">*</text></text>
+        <input class="form-input" type="digit" placeholder="65" value="{{weight}}" bindinput="onInput" data-field="weight" />
+      </view>
+      <view class="form-group form-half">
+        <text class="form-label">身高(cm) <text class="required">*</text></text>
+        <input class="form-input" type="digit" placeholder="170" value="{{height}}" bindinput="onInput" data-field="height" />
+      </view>
+    </view>
+
+    <view class="form-row">
+      <view class="form-group form-half">
+        <text class="form-label">最大心率</text>
+        <input class="form-input" type="number" placeholder="190" value="{{hrMax}}" bindinput="onInput" data-field="hrMax" />
+      </view>
+      <view class="form-group form-half">
+        <text class="form-label">安静心率</text>
+        <input class="form-input" type="number" placeholder="55" value="{{rhr}}" bindinput="onInput" data-field="rhr" />
+      </view>
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">近4周平均周跑量(km)</text>
+      <input class="form-input" type="digit" placeholder="50" value="{{weeklyKm}}" bindinput="onInput" data-field="weeklyKm" />
+    </view>
+  </view>
+
+  <!-- PB 记录 -->
+  <view class="card">
+    <view class="card-title">个人最佳成绩 (PB)</view>
+
+    <view class="form-group">
+      <text class="form-label">10km PB</text>
+      <view class="form-row">
+        <input class="form-input form-flex" placeholder="如 42:30" value="{{pb10k}}" bindinput="onInput" data-field="pb10k" />
+        <picker mode="date" value="{{pb10kDate}}" bindchange="onDateChange" data-field="pb10kDate">
+          <view class="date-picker">{{pb10kDate || '日期'}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">半马 PB</text>
+      <view class="form-row">
+        <input class="form-input form-flex" placeholder="如 1:33:00" value="{{pbHalf}}" bindinput="onInput" data-field="pbHalf" />
+        <picker mode="date" value="{{pbHalfDate}}" bindchange="onDateChange" data-field="pbHalfDate">
+          <view class="date-picker">{{pbHalfDate || '日期'}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">全马 PB</text>
+      <view class="form-row">
+        <input class="form-input form-flex" placeholder="如 3:15:00" value="{{pbFull}}" bindinput="onInput" data-field="pbFull" />
+        <picker mode="date" value="{{pbFullDate}}" bindchange="onDateChange" data-field="pbFullDate">
+          <view class="date-picker">{{pbFullDate || '日期'}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">乳酸阈值配速 (T-Pace)</text>
+      <input class="form-input" placeholder="如 4'03\"/km" value="{{tPace}}" bindinput="onInput" data-field="tPace" />
+    </view>
+  </view>
+
+  <!-- HRV 数据 -->
+  <view class="card">
+    <view class="card-title">HRV 数据 (选填)</view>
+    <view class="card-subtitle">提供 HRV 数据可显著提升竞技状态评估精度</view>
+
+    <view class="form-group">
+      <text class="form-label">数据来源设备</text>
+      <input class="form-input" placeholder="COROS / Garmin / Apple Watch" value="{{hrvDevice}}" bindinput="onInput" data-field="hrvDevice" />
+    </view>
+
+    <view class="form-row">
+      <view class="form-group form-half">
+        <text class="form-label">HRV 基线(ms)</text>
+        <input class="form-input" type="digit" placeholder="30天均值" value="{{hrvBaseline}}" bindinput="onInput" data-field="hrvBaseline" />
+      </view>
+      <view class="form-group form-half">
+        <text class="form-label">基线 SD(ms)</text>
+        <input class="form-input" type="digit" placeholder="标准差" value="{{hrvBaselineSD}}" bindinput="onInput" data-field="hrvBaselineSD" />
+      </view>
+    </view>
+  </view>
+
+  <!-- 伤病 -->
+  <view class="card">
+    <view class="card-title">伤病状况</view>
+    <view class="form-group">
+      <textarea class="form-textarea" placeholder="描述当前伤病情况，如无则留空" value="{{injury}}" bindinput="onInput" data-field="injury" />
+    </view>
+  </view>
+
+  <!-- 保存按钮 -->
+  <button class="btn-primary save-btn" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">
+    {{saving ? '保存中...' : '保存档案'}}
+  </button>
+</view>

@@ -1,0 +1,34 @@
+.tabs {
+  display: flex;
+  background: var(--bg-card);
+  border-radius: 12rpx;
+  padding: 4rpx;
+  margin-bottom: 24rpx;
+  box-shadow: var(--shadow);
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  border-radius: 10rpx;
+  transition: all 0.2s;
+}
+
+.tab-active {
+  background: var(--primary);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.report-card { padding: 28rpx 32rpx; }
+.report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
+.report-date { font-size: 22rpx; color: var(--text-hint); }
+.report-title { font-size: 30rpx; font-weight: 600; margin-bottom: 8rpx; }
+.report-meta-row { display: flex; gap: 16rpx; font-size: 24rpx; color: var(--text-secondary); }
+.report-runner { color: var(--primary); }
+.report-odds { margin-top: 8rpx; font-size: 24rpx; color: var(--success); font-weight: 500; }
+
+.empty-actions { display: flex; flex-direction: column; width: 100%; max-width: 400rpx; }

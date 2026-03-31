@@ -1,0 +1,76 @@
+# ══════════════════════════════════════════════════════════
+#  Marathon Training PB — .gitignore
+#  排除个人跑者数据、生成报告、API 密钥等隐私内容
+# ══════════════════════════════════════════════════════════
+
+# ── 个人跑者配置（含体重、身高、PB 等隐私数据） ──
+api-tools/race_config.yaml
+api-tools/race_config_*.yaml
+!api-tools/race_config.example.yaml
+
+# ── 跑者档案（持久化个人数据） ──
+api-tools/runner_profile_*.yaml
+!api-tools/runner_profile.example.yaml
+
+# ── 训练周期配置（含个人训练参数） ──
+api-tools/training_cycle_config.yaml
+api-tools/training_cycle_config_*.yaml
+!api-tools/training_cycle_config.example.yaml
+
+# ── 个人跑者数据目录（原始截图、HRV图片等） ──
+runner_data_*/
+*数据/
+
+# ── 个人跑者生成报告（PDF 输出目录） ──
+runner_reports_*/
+*报告/
+
+# ── 个人跑者 Markdown 报告 ──
+*_PB_*.md
+*_赛道复盘*.md
+*_比赛复盘*.md
+*_目标设定*.md
+*_作战方案*.md
+*_天气日报_*.md
+*_训练目标*.md
+*_训练计划*.md
+*_W[0-9]*_*.md
+Weather_Impact_Summary_*.md
+
+# ── 个人跑者数据图片（根目录散落） ──
+*_runner_*.jpg
+
+# ── 所有生成的 PDF ──
+*.pdf
+
+# ── 临时文件 ──
+temp_report.html
+
+# ── API 密钥与生成的天气报告 ──
+.env
+api-tools/.env
+api-tools/reports/
+cloudfunctions/**/.env
+
+# ── 含硬编码凭证的脚本（webhook key / 邮箱密码） ──
+api-tools/send_wechat_*.py
+api-tools/send_wechat_*.sh
+api-tools/daily_weather_email.py
+
+# ── 重复/备份文件 ──
+*\ (2).*
+*\ (2)
+
+# ── Python 缓存 ──
+__pycache__/
+*.pyc
+*.pyo
+
+# ── 编辑器 / OS ──
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/

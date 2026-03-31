@@ -1,0 +1,10 @@
+{
+  "name": "raceGoal",
+  "version": "1.0.0",
+  "description": "赛前目标设定 - LLM驱动分析",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "axios": "^1.6.0"
+  }
+}
