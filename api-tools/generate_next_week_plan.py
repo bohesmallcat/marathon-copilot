@@ -303,6 +303,7 @@ def generate_skill_prompt(
     weather: list[dict],
     runner_profile: dict | None,
     cycle_config: dict | None,
+    health_data: dict | None = None,
 ) -> str:
     """Generate a comprehensive prompt for the training-weekly skill.
 
@@ -379,21 +380,171 @@ def generate_skill_prompt(
         lines.append(f"- 状态: {comp['status']}")
         lines.append("")
 
-    # ── Section 5: Recovery Assessment ──
-    lines.append("## 5. 恢复状态评估（基于 COROS 数据推断）")
+    # ── Section 5: Recovery Assessment (Multi-dimensional) ──
+    lines.append("## 5. 恢复状态评估（COROS 多维数据）")
     lines.append("")
-    actual = coros_analysis.get("actual", {})
-    training_load = actual.get("training_load", 0)
-    if training_load > 500:
-        lines.append("- 训练负荷: 偏高 (>500)，建议本周适当降量")
-    elif training_load > 350:
-        lines.append(f"- 训练负荷: 中等 ({training_load})，可正常推进")
-    else:
-        lines.append(f"- 训练负荷: 较低 ({training_load})，可适度增量")
 
-    hr_summary = coros_analysis.get("hr_summary", {})
-    lines.append(f"- 心率范围: {hr_summary.get('avg_hr_range', 'N/A')}")
-    lines.append("")
+    if health_data:
+        # 5a. HRV Assessment
+        hrv = health_data.get("sleep_hrv", {})
+        if hrv.get("baseline"):
+            lines.append("### 5.1 HRV（心率变异性）")
+            baseline = hrv["baseline"]
+            sd = hrv.get("sd", 0)
+            daily = hrv.get("daily", [])
+            lines.append(f"- 30天基线: {baseline} ms (SD={sd})")
+            if daily:
+                recent_vals = [d["avg_hrv"] for d in daily if d.get("avg_hrv")]
+                if recent_vals:
+                    avg_recent = sum(recent_vals) / len(recent_vals)
+                    min_recent = min(recent_vals)
+                    max_recent = max(recent_vals)
+                    deviation_pct = ((avg_recent - baseline) / baseline) * 100
+                    lines.append(f"- 近{len(recent_vals)}天均值: {avg_recent:.1f} ms "
+                                 f"(偏离基线 {deviation_pct:+.1f}%)")
+                    lines.append(f"- 近期范围: {min_recent}~{max_recent} ms")
+                    # HRV assessment
+                    if deviation_pct > 5:
+                        lines.append(f"- HRV 评估: **状态极佳** — 超基线恢复，可进行高强度训练")
+                    elif deviation_pct >= -5:
+                        lines.append(f"- HRV 评估: **状态正常** — 正常恢复，可按计划推进")
+                    elif deviation_pct >= -15:
+                        lines.append(f"- HRV 评估: **状态偏低** — 恢复不足，建议降低强度")
+                    else:
+                        lines.append(f"- HRV 评估: **状态较差** — 显著疲劳/压力，建议以恢复跑为主")
+                    # Daily trend
+                    lines.append(f"- 每日记录:")
+                    for d in daily:
+                        ds = str(d["date"])
+                        dd = f"{ds[:4]}-{ds[4:6]}-{ds[6:]}"
+                        delta = d["avg_hrv"] - baseline
+                        lines.append(f"  - {dd}: {d['avg_hrv']} ms ({'+' if delta >= 0 else ''}{delta})")
+            lines.append("")
+
+        # 5b. Recovery Status
+        rec = health_data.get("recovery", {})
+        if rec:
+            lines.append("### 5.2 恢复状态")
+            recovery_pct = rec.get("recovery_pct", 0)
+            recovery_state = rec.get("recovery_state", 0)
+            recovery_hours = rec.get("full_recovery_hours", 0)
+            state_map = {1: "低 (疲劳累积)", 2: "中低 (需更多休息)",
+                         3: "中 (基本恢复)", 4: "完全恢复"}
+            lines.append(f"- 恢复百分比: {recovery_pct}%")
+            lines.append(f"- 恢复状态: {state_map.get(recovery_state, str(recovery_state))}")
+            if recovery_hours > 0:
+                lines.append(f"- 预计完全恢复需: {recovery_hours} 小时")
+            lines.append(f"- 安静心率: {health_data.get('resting_hr', 'N/A')} bpm")
+            lines.append("")
+
+        # 5c. Training Load Balance
+        load = health_data.get("training_load", {})
+        load_summary = load.get("summary", {}) if load else {}
+        if load_summary:
+            lines.append("### 5.3 训练负荷平衡")
+            t7d = load_summary.get("current_t7d", 0)
+            t28d = load_summary.get("current_t28d", 0)
+            ati = load_summary.get("current_ati", 0)
+            cti = load_summary.get("current_cti", 0)
+            tib = load_summary.get("current_tib", 0)
+            fatigue = load_summary.get("current_fatigue_rate", 0)
+            fatigue_state = load_summary.get("current_fatigue_state", 0)
+
+            lines.append(f"- 7天累计负荷: {t7d}")
+            lines.append(f"- 28天累计负荷: {t28d}")
+            lines.append(f"- ATI (急性训练指数): {ati}")
+            lines.append(f"- CTI (慢性训练指数): {cti}")
+            lines.append(f"- TIB (训练强度平衡): {tib}")
+
+            # ATI/CTI ratio interpretation
+            if cti > 0:
+                ratio = ati / cti
+                if ratio > 1.3:
+                    lines.append(f"- 急慢比: {ratio:.2f} — **过度训练风险**，急性负荷远超慢性适应")
+                elif ratio > 1.1:
+                    lines.append(f"- 急慢比: {ratio:.2f} — **负荷偏高**，注意恢复")
+                elif ratio >= 0.8:
+                    lines.append(f"- 急慢比: {ratio:.2f} — **训练适中**，身体适应良好")
+                else:
+                    lines.append(f"- 急慢比: {ratio:.2f} — **训练不足**，可适度加量")
+
+            fatigue_map = {1: "过度训练", 2: "恢复中", 3: "正常", 4: "训练偏少"}
+            lines.append(f"- 疲劳度: {fatigue:.1f} ({fatigue_map.get(fatigue_state, '?')})")
+
+            # Daily load trend (last 7 days)
+            daily_metrics = load.get("daily_metrics", [])[-7:]
+            if daily_metrics:
+                lines.append(f"- 近7天日负荷:")
+                for dm in daily_metrics:
+                    ds = str(dm["date"])
+                    dd = f"{ds[:4]}-{ds[4:6]}-{ds[6:]}"
+                    lines.append(f"  - {dd}: TL={dm['training_load']}, "
+                                 f"ATI={dm['ati']}, CTI={dm['cti']}, TIB={dm['tib']}")
+            lines.append("")
+
+        # 5d. Composite readiness signal
+        lines.append("### 5.4 综合训练准备度")
+        signals = []
+        # HRV signal
+        if hrv.get("baseline"):
+            recent_vals = [d["avg_hrv"] for d in hrv.get("daily", []) if d.get("avg_hrv")]
+            if recent_vals:
+                dev = ((sum(recent_vals) / len(recent_vals)) - hrv["baseline"]) / hrv["baseline"] * 100
+                if dev >= -5:
+                    signals.append(("HRV", "green", "正常/良好"))
+                elif dev >= -15:
+                    signals.append(("HRV", "yellow", "偏低"))
+                else:
+                    signals.append(("HRV", "red", "显著偏低"))
+        # Recovery signal
+        if rec.get("recovery_pct") is not None:
+            rp = rec["recovery_pct"]
+            if rp >= 80:
+                signals.append(("恢复", "green", f"{rp}%"))
+            elif rp >= 50:
+                signals.append(("恢复", "yellow", f"{rp}%"))
+            else:
+                signals.append(("恢复", "red", f"{rp}%"))
+        # Load balance signal
+        if load_summary and load_summary.get("current_cti", 0) > 0:
+            ratio = load_summary["current_ati"] / load_summary["current_cti"]
+            if 0.8 <= ratio <= 1.1:
+                signals.append(("负荷", "green", f"急慢比 {ratio:.2f}"))
+            elif ratio <= 1.3:
+                signals.append(("负荷", "yellow", f"急慢比 {ratio:.2f}"))
+            else:
+                signals.append(("负荷", "red", f"急慢比 {ratio:.2f}"))
+
+        signal_icons = {"green": "🟢", "yellow": "🟡", "red": "🔴"}
+        for name, color, detail in signals:
+            lines.append(f"- {signal_icons[color]} {name}: {detail}")
+
+        green_count = sum(1 for _, c, _ in signals if c == "green")
+        red_count = sum(1 for _, c, _ in signals if c == "red")
+        if red_count >= 2:
+            lines.append(f"- **综合建议: 本周以恢复为主，降量 30-40%，避免高强度训练**")
+        elif red_count >= 1:
+            lines.append(f"- **综合建议: 谨慎推进，降低强度，增加恢复日**")
+        elif green_count == len(signals):
+            lines.append(f"- **综合建议: 身体状态良好，可按计划正常推进**")
+        else:
+            lines.append(f"- **综合建议: 状态一般，建议微调强度，关注恢复质量**")
+        lines.append("")
+
+    else:
+        # Fallback: old simple assessment when health data unavailable
+        actual = coros_analysis.get("actual", {})
+        training_load = actual.get("training_load", 0)
+        if training_load > 500:
+            lines.append("- 训练负荷: 偏高 (>500)，建议本周适当降量")
+        elif training_load > 350:
+            lines.append(f"- 训练负荷: 中等 ({training_load})，可正常推进")
+        else:
+            lines.append(f"- 训练负荷: 较低 ({training_load})，可适度增量")
+        hr_summary = coros_analysis.get("hr_summary", {})
+        lines.append(f"- 心率范围: {hr_summary.get('avg_hr_range', 'N/A')}")
+        lines.append("- (健康数据不可用，评估基于简化模型)")
+        lines.append("")
 
     # ── Section 6: Runner Profile ──
     if runner_profile:
@@ -552,6 +703,24 @@ def main():
     print(f"  获取到 {summary['total_activities']} 条活动, "
           f"跑步 {summary['run_distance_km']}km", file=sys.stderr)
 
+    # ── Pull health & recovery data ──
+    health_data = None
+    try:
+        print(f"正在获取健康与恢复数据...", file=sys.stderr)
+        health_summary = client.get_health_summary()
+        training_load = client.get_training_load_detail(days=14)
+        health_data = {
+            **health_summary,
+            "training_load": training_load,
+        }
+        hrv_daily = health_summary.get("sleep_hrv", {}).get("daily", [])
+        rec_pct = health_summary.get("recovery", {}).get("recovery_pct", "?")
+        print(f"  HRV 数据: {len(hrv_daily)} 天, 恢复度: {rec_pct}%, "
+              f"安静心率: {health_summary.get('resting_hr', '?')} bpm",
+              file=sys.stderr)
+    except Exception as e:
+        print(f"  Warning: 健康数据获取失败 ({e})，使用简化模型", file=sys.stderr)
+
     # ── Analyze ──
     plan_data = None
     if cycle_config:
@@ -608,11 +777,13 @@ def main():
             "week_info": week_info,
             "paces": {k: v for k, v in paces.items() if k != "paces_raw"},
             "weather": weather,
+            "health_data": health_data,
         }, ensure_ascii=False, indent=2)
     else:
         output = generate_skill_prompt(
             analysis, week_info, paces, weather,
             runner_profile, cycle_config,
+            health_data=health_data,
         )
 
     # ── Output ──

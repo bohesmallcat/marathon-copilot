@@ -67,6 +67,9 @@ ENDPOINTS = {
     "activity_detail": "/activity/detail/query",
     "activity_download": "/activity/detail/download",
     "schedule":        "/training/schedule/query",
+    "dashboard":       "/dashboard/query",
+    "dashboard_detail": "/dashboard/detail/query",
+    "analyse":         "/analyse/query",
 }
 
 BASE_HEADERS = {
@@ -309,6 +312,133 @@ class CorosClient:
         resp.raise_for_status()
         return resp.json()
 
+    # ── Health & Recovery Data ─────────────────────────────────────
+
+    def get_health_summary(self) -> dict:
+        """Fetch health summary including HRV, recovery, resting HR.
+
+        Calls /dashboard/query and extracts health-relevant fields
+        from summaryInfo.
+
+        Returns:
+            Dict with keys: sleep_hrv, recovery, resting_hr, training_scores.
+        """
+        resp = requests.get(
+            self._url("dashboard"),
+            headers=self._auth_headers(),
+            timeout=REQUEST_TIMEOUT,
+            verify=False,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+
+        if result.get("result") != "0000":
+            raise RuntimeError(f"API error: {result.get('message', result)}")
+
+        info = result.get("data", {}).get("summaryInfo", {})
+
+        # Extract sleep HRV data
+        hrv_raw = info.get("sleepHrvData", {})
+        hrv_list = []
+        for item in hrv_raw.get("sleepHrvList", []):
+            hrv_list.append({
+                "date": item.get("happenDay"),
+                "avg_hrv": item.get("avgSleepHrv", 0),
+                "baseline": item.get("sleepHrvBase", 0),
+                "sd": item.get("sleepHrvSd", 0),
+            })
+
+        sleep_hrv = {
+            "baseline": hrv_raw.get("lastSleepHrvBase", 0),
+            "sd": hrv_raw.get("lastSleepHrvSd", 0),
+            "daily": hrv_list,
+        }
+
+        # Recovery info
+        recovery = {
+            "recovery_pct": info.get("recoveryPct", 0),
+            "recovery_state": info.get("recoveryState", 0),
+            "full_recovery_hours": info.get("fullRecoveryHours", 0),
+        }
+
+        # Training performance scores
+        training_scores = {
+            "aerobic_endurance": info.get("aerobicEnduranceScore", 0),
+            "anaerobic_capacity": info.get("anaerobicCapacityScore", 0),
+            "anaerobic_endurance": info.get("anaerobicEnduranceScore", 0),
+            "lactate_threshold": info.get("lactateThresholdCapacityScore", 0),
+            "stamina_level": info.get("staminaLevel", 0),
+        }
+
+        return {
+            "sleep_hrv": sleep_hrv,
+            "recovery": recovery,
+            "resting_hr": info.get("rhr", 0),
+            "training_scores": training_scores,
+        }
+
+    def get_training_load_detail(self, days: int = 14) -> dict:
+        """Fetch daily training load metrics (ATI/CTI/TIB/fatigue).
+
+        Calls /analyse/query and extracts daily training load detail
+        from dayList.
+
+        Args:
+            days: Number of recent days to return (default 14).
+
+        Returns:
+            Dict with keys: daily_metrics (list), summary.
+        """
+        resp = requests.get(
+            self._url("analyse"),
+            headers=self._auth_headers(),
+            timeout=REQUEST_TIMEOUT,
+            verify=False,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+
+        if result.get("result") != "0000":
+            raise RuntimeError(f"API error: {result.get('message', result)}")
+
+        day_list = result.get("data", {}).get("dayList", [])
+
+        # Take the last N days
+        recent = day_list[-days:] if len(day_list) > days else day_list
+
+        daily_metrics = []
+        for d in recent:
+            daily_metrics.append({
+                "date": d.get("happenDay"),
+                "training_load": d.get("trainingLoad", 0),
+                "t7d": d.get("t7d", 0),
+                "t28d": d.get("t28d", 0),
+                "ati": d.get("ati", 0),       # Acute Training Index
+                "cti": d.get("cti", 0),       # Chronic Training Index
+                "tib": d.get("tib", 0),       # Training Intensity Balance
+                "fatigue_rate": d.get("tiredRateNew", 0),
+                "fatigue_state": d.get("tiredRateStateNew", 0),
+                "recommended_tl_min": d.get("recomendTlMin", 0),
+                "recommended_tl_max": d.get("recomendTlMax", 0),
+            })
+
+        # Compute summary from latest entry
+        latest = daily_metrics[-1] if daily_metrics else {}
+        summary = {
+            "current_t7d": latest.get("t7d", 0),
+            "current_t28d": latest.get("t28d", 0),
+            "current_ati": latest.get("ati", 0),
+            "current_cti": latest.get("cti", 0),
+            "current_tib": latest.get("tib", 0),
+            "current_fatigue_rate": latest.get("fatigue_rate", 0),
+            "current_fatigue_state": latest.get("fatigue_state", 0),
+        }
+
+        return {
+            "daily_metrics": daily_metrics,
+            "summary": summary,
+        }
+
     # ── Weekly Summary ─────────────────────────────────────────────
 
     def get_weekly_activities(self, weeks_ago: int = 0,
@@ -514,6 +644,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="几周前 (0=本周, 1=上周, 默认: 1)"
     )
 
+    # health
+    sub.add_parser("health", help="健康数据 (HRV/恢复/训练负荷)")
+
     return parser
 
 
@@ -584,6 +717,44 @@ def main():
             print(json.dumps(summary, ensure_ascii=False, indent=2))
         else:
             print_weekly_summary(summary)
+
+    elif args.command == "health":
+        health = client.get_health_summary()
+        load = client.get_training_load_detail(days=7)
+        if args.json:
+            print(json.dumps({"health": health, "training_load": load},
+                             ensure_ascii=False, indent=2))
+        else:
+            print(f"\n{'='*50}")
+            print(f"  健康与恢复状态")
+            print(f"{'='*50}")
+            print(f"  安静心率:    {health['resting_hr']} bpm")
+            rec = health['recovery']
+            state_map = {1: "低", 2: "中低", 3: "中", 4: "完全恢复"}
+            print(f"  恢复百分比:  {rec['recovery_pct']}%")
+            print(f"  恢复状态:    {state_map.get(rec['recovery_state'], rec['recovery_state'])}")
+            print(f"  完全恢复需:  {rec['full_recovery_hours']}h")
+            print(f"\n  --- Sleep HRV ---")
+            hrv = health['sleep_hrv']
+            print(f"  HRV 基线:    {hrv['baseline']} ms")
+            print(f"  HRV 标准差:  {hrv['sd']}")
+            for d in hrv['daily']:
+                ds = str(d['date'])
+                dd = f"{ds[:4]}-{ds[4:6]}-{ds[6:]}"
+                delta = d['avg_hrv'] - d['baseline']
+                sign = "+" if delta >= 0 else ""
+                print(f"    {dd}: HRV={d['avg_hrv']} ({sign}{delta})")
+            print(f"\n  --- 训练负荷趋势 (近7天) ---")
+            s = load['summary']
+            print(f"  7天累计负荷:  {s['current_t7d']}")
+            print(f"  28天累计负荷: {s['current_t28d']}")
+            print(f"  ATI(急性):    {s['current_ati']}")
+            print(f"  CTI(慢性):    {s['current_cti']}")
+            print(f"  TIB(平衡):    {s['current_tib']}")
+            fs_map = {1: "过度训练", 2: "恢复中", 3: "正常", 4: "减训练"}
+            print(f"  疲劳度:       {s['current_fatigue_rate']:.1f} "
+                  f"({fs_map.get(s['current_fatigue_state'], '?')})")
+            print(f"{'='*50}\n")
 
 
 if __name__ == "__main__":
