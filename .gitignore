@@ -37,8 +37,13 @@ runner_reports_*/
 *_W[0-9]*_*.md
 Weather_Impact_Summary_*.md
 
-# ── 个人跑者数据图片（根目录散落） ──
+# ── 个人跑者数据图片 ──
 *_runner_*.jpg
+markdownfile/*数据*.jpg
+markdownfile/*分段数据*.jpg
+
+# ── 个人跑者比赛执行方案 ──
+*_比赛执行方案*.md
 
 # ── 所有生成的 PDF ──
 *.pdf
