@@ -62,14 +62,18 @@ CN_BASE_URL = "https://teamcnapi.coros.com"
 INTL_BASE_URL = "https://teamapi.coros.com"
 
 ENDPOINTS = {
-    "login":           "/account/login",
-    "activities":      "/activity/query",
-    "activity_detail": "/activity/detail/query",
-    "activity_download": "/activity/detail/download",
-    "schedule":        "/training/schedule/query",
-    "dashboard":       "/dashboard/query",
-    "dashboard_detail": "/dashboard/detail/query",
-    "analyse":         "/analyse/query",
+    "login":              "/account/login",
+    "activities":         "/activity/query",
+    "activity_detail":    "/activity/detail/query",
+    "activity_download":  "/activity/detail/download",
+    "schedule":           "/training/schedule/query",
+    "dashboard":          "/dashboard/query",
+    "dashboard_detail":   "/dashboard/detail/query",
+    "analyse":            "/analyse/query",
+    "program_calculate":  "/training/program/calculate",
+    "program_add":        "/training/program/add",
+    "program_query":      "/training/program/query",
+    "exercise_query":     "/training/exercise/query",
 }
 
 BASE_HEADERS = {
@@ -103,6 +107,38 @@ SPORT_TYPE_MAP = {
     (900, 31): "健走",
     (900, 0): "健走",
 }
+
+# Running workout segment templates (verified by openclaw-coros-coach)
+# Used when creating structured running workouts via /training/program/add
+RUNNING_TEMPLATES = {
+    "warmup": {
+        "name": "T1120",
+        "originId": "425895398452936705",
+        "exerciseType": 1,
+        "overview": "sid_run_warm_up_dist",
+    },
+    "main": {
+        "name": "T3001",
+        "originId": "426109589008859136",
+        "exerciseType": 2,
+        "overview": "sid_run_training",
+    },
+    "cooldown": {
+        "name": "T1122",
+        "originId": "425895456971866112",
+        "exerciseType": 3,
+        "overview": "sid_run_cool_down_dist",
+    },
+}
+
+# Sort number increment for segment ordering (2^24)
+SORT_NO_INCREMENT = 16777216
+
+# Default source image URL for workouts
+DEFAULT_SOURCE_URL = (
+    "https://d31oxp44ddzkyk.cloudfront.net/source/source_default"
+    "/0/2fbd46e17bc54bc5873415c9fa767bdc.jpg"
+)
 
 
 # ── Helper Functions ───────────────────────────────────────────────
@@ -191,11 +227,22 @@ class CorosClient:
             raise RuntimeError("Not authenticated. Call login() or set_token() first.")
         return {**self.headers, "accesstoken": self.access_token}
 
+    def _write_headers(self) -> dict:
+        """Headers for write operations (includes yfheader with userId)."""
+        h = self._auth_headers()
+        if self.user_id:
+            h["yfheader"] = json.dumps({"userId": str(self.user_id)})
+        return h
+
     # ── Authentication ─────────────────────────────────────────────
 
     def set_token(self, token: str) -> None:
         """Set access token directly (from browser DevTools)."""
         self.access_token = token
+
+    def set_user_id(self, user_id: str) -> None:
+        """Set user ID explicitly (needed for write operations)."""
+        self.user_id = user_id
 
     def login(self, account: str, password: str) -> dict:
         """Login with email/phone and password.
@@ -544,6 +591,277 @@ class CorosClient:
         summary["run_duration_str"] = format_duration(summary["run_duration_sec"])
 
         return summary
+
+    # ── Workout Creation (Write API) ───────────────────────────────
+
+    @staticmethod
+    def build_running_segment(
+        template_key: str,
+        distance_km: float,
+        pace_sec: int,
+        pace_max_sec: int | None = None,
+        sort_index: int = 1,
+        display_name: str | None = None,
+        user_id: int = 0,
+    ) -> dict:
+        """Build a single running workout segment payload.
+
+        Args:
+            template_key: 'warmup', 'main', or 'cooldown'.
+            distance_km: Segment distance in km.
+            pace_sec: Target pace in seconds/km (e.g. 330 = 5'30"/km).
+            pace_max_sec: Max pace (slower end). Defaults to pace_sec + 10.
+            sort_index: 1-based position index for ordering.
+            display_name: Override segment display name (e.g. '快跑', '慢跑').
+            user_id: COROS user ID (numeric). 0 for default.
+
+        Returns:
+            Dict ready for the exercises[] array in workout payload.
+        """
+        tpl = RUNNING_TEMPLATES[template_key]
+        if pace_max_sec is None:
+            pace_max_sec = pace_sec + 10
+
+        segment = {
+            "exerciseType": tpl["exerciseType"],
+            "name": tpl["name"],
+            "originId": tpl["originId"],
+            "overview": tpl["overview"],
+            "sportType": 1,
+            "equipment": [1],
+            "part": [0],
+            "hrType": 3,
+            "intensityType": 3,
+            "intensityCustom": 0,
+            "intensityDisplayUnit": 1,
+            "intensityMultiplier": 0,
+            "intensityPercent": 0,
+            "intensityPercentExtend": 0,
+            "intensityValue": pace_sec,
+            "intensityValueExtend": pace_max_sec,
+            "isIntensityPercent": False,
+            "isDefaultAdd": 0,
+            "isGroup": False,
+            "targetType": 5,
+            "targetValue": int(distance_km * 100000),
+            "restType": 3,
+            "restValue": 0,
+            "sets": 1,
+            "sortNo": sort_index * SORT_NO_INCREMENT,
+            "groupId": "0",
+            "access": 0,
+            "sourceId": "0",
+            "subType": 0,
+            "userId": user_id,
+            "createTimestamp": int(datetime.now().timestamp()),
+            "defaultOrder": sort_index,
+        }
+        if display_name:
+            segment["nameText"] = display_name
+        return segment
+
+    @staticmethod
+    def build_running_workout_payload(
+        name: str,
+        overview: str,
+        segments: list[dict],
+        user_id: str = "0",
+    ) -> dict:
+        """Assemble a complete running workout payload.
+
+        Args:
+            name: Workout name (e.g. 'E跑-轻松跑 10km').
+            overview: Short description.
+            segments: List of segment dicts from build_running_segment().
+            user_id: COROS user ID string.
+
+        Returns:
+            Complete payload dict for /training/program/add.
+        """
+        total_distance_cm = sum(s.get("targetValue", 0) for s in segments)
+        total_sets = len(segments)
+
+        return {
+            "sportType": 1,
+            "name": name,
+            "overview": overview,
+            "access": 1,
+            "type": 0,
+            "subType": 65535,
+            "status": 1,
+            "deleted": 0,
+            "simple": False,
+            "pbVersion": 2,
+            "userId": user_id,
+            "authorId": user_id,
+            "sourceId": "425868142590476288",
+            "sourceUrl": DEFAULT_SOURCE_URL,
+            "distanceDisplayUnit": 1,
+            "unit": 0,
+            "version": 0,
+            "poolLength": 2500,
+            "poolLengthId": 1,
+            "poolLengthUnit": 2,
+            "isTargetTypeConsistent": 1,
+            "targetType": 5,
+            "targetValue": total_distance_cm,
+            "duration": 0,
+            "totalSets": total_sets,
+            "sets": total_sets,
+            "exerciseNum": total_sets,
+            "exercises": segments,
+            "headPic": "",
+            "id": "0",
+            "idInPlan": "0",
+            "nickname": "",
+            "originEssence": 0,
+            "essence": 0,
+            "estimatedType": 0,
+            "estimatedValue": 0,
+            "profile": "",
+            "referExercise": {
+                "intensityType": 1,
+                "hrType": 0,
+                "valueType": 1,
+            },
+            "sex": 0,
+            "shareUrl": "",
+            "star": 0,
+            "thirdPartyId": 0,
+            "trainingLoad": 0,
+            "videoCoverUrl": "",
+            "videoUrl": "",
+            "fastIntensityTypeName": "pace",
+            "poolLengthId": 1,
+            "poolLengthUnit": 2,
+            "createTimestamp": 0,
+            "distance": 0,
+        }
+
+    def calculate_program(self, payload: dict) -> dict:
+        """Calculate workout metrics (duration, training load).
+
+        Calls /training/program/calculate before saving.
+
+        Args:
+            payload: Complete workout payload.
+
+        Returns:
+            Dict with duration, totalSets, trainingLoad.
+        """
+        resp = requests.post(
+            self._url("program_calculate"),
+            json=payload,
+            headers=self._write_headers(),
+            timeout=REQUEST_TIMEOUT,
+            verify=False,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        if result.get("result") != "0000":
+            raise RuntimeError(
+                f"Calculate failed: {result.get('message', result)}")
+        return result.get("data", {})
+
+    def add_program(self, payload: dict) -> dict:
+        """Save workout to COROS Training Hub.
+
+        Calls /training/program/add. The workout will sync to the watch.
+
+        Args:
+            payload: Complete workout payload (with calculated metrics applied).
+
+        Returns:
+            API response data (includes program ID on success).
+        """
+        resp = requests.post(
+            self._url("program_add"),
+            json=payload,
+            headers=self._write_headers(),
+            timeout=REQUEST_TIMEOUT,
+            verify=False,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        if result.get("result") != "0000":
+            raise RuntimeError(
+                f"Add program failed: {result.get('message', result)}")
+        return result.get("data", result)
+
+    def create_running_workout(
+        self,
+        name: str,
+        overview: str,
+        segments: list[dict],
+    ) -> dict:
+        """Create a running workout: calculate metrics then save.
+
+        Args:
+            name: Workout name.
+            overview: Short description.
+            segments: Segment dicts from build_running_segment().
+
+        Returns:
+            Dict with program_id, duration, training_load, total_sets.
+        """
+        user_id = str(self.user_id or "0")
+        payload = self.build_running_workout_payload(
+            name, overview, segments, user_id=user_id,
+        )
+
+        calculated = self.calculate_program(payload)
+        payload["duration"] = calculated.get("duration", 0)
+        payload["totalSets"] = calculated.get("totalSets", len(segments))
+        payload["trainingLoad"] = calculated.get("trainingLoad", 0)
+        payload["sets"] = payload["totalSets"]
+        payload["distance"] = "0"
+
+        program_id = self.add_program(payload)
+
+        return {
+            "program_id": program_id,
+            "name": name,
+            "duration": calculated.get("duration", 0),
+            "training_load": calculated.get("trainingLoad", 0),
+            "total_sets": calculated.get("totalSets", len(segments)),
+        }
+
+    def query_programs(
+        self,
+        name: str = "",
+        sport_type: int = 0,
+        limit: int = 10,
+    ) -> dict:
+        """Query existing workout programs.
+
+        Args:
+            name: Filter by name (empty = all).
+            sport_type: 0=all, 1=running, 4=strength.
+            limit: Max results.
+
+        Returns:
+            Raw API response data.
+        """
+        body = {
+            "name": name,
+            "supportRestExercise": 1,
+            "startNo": 0,
+            "limitSize": limit,
+            "sportType": sport_type,
+        }
+        resp = requests.post(
+            self._url("program_query"),
+            json=body,
+            headers=self._write_headers(),
+            timeout=REQUEST_TIMEOUT,
+            verify=False,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        if result.get("result") != "0000":
+            raise RuntimeError(
+                f"Query programs failed: {result.get('message', result)}")
+        return result.get("data", {})
 
 
 # ── CLI Formatters ─────────────────────────────────────────────────
