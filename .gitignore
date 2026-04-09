@@ -35,6 +35,8 @@ runner_reports_*/
 *_训练目标*.md
 *_训练计划*.md
 *训练计划*.md
+# 通用大众跑者方案（无个人数据）允许提交
+!markdownfile/HYROX_大众跑者_*训练计划*.md
 *_W[0-9]*_*.md
 Weather_Impact_Summary_*.md
 
