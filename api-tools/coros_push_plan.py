@@ -576,7 +576,8 @@ def resolve_token(args) -> str | None:
         return token
     try:
         from coros_token_manager import get_valid_token
-        return get_valid_token(region=args.region)
+        user = getattr(args, "user", None)
+        return get_valid_token(region=args.region, user=user)
     except Exception:
         return None
 
@@ -601,6 +602,8 @@ def main():
     )
 
     auth = parser.add_argument_group("COROS 认证")
+    auth.add_argument("--user", "-u",
+                      help="用户标识 (如 runner_a, runner_b)，用于多用户 token 管理")
     auth.add_argument("--token", help="COROS accessToken")
     auth.add_argument("--email", help="COROS 账号")
     auth.add_argument("--password", help="COROS 密码")

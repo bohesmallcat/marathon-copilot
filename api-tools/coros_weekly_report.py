@@ -444,7 +444,9 @@ def main():
         epilog=__doc__,
     )
     auth = parser.add_argument_group("认证")
-    auth.add_argument("--token", help="COROS accessToken")
+    auth.add_argument("--user", "-u",
+                      help="用户标识 (如 runner_a, runner_b)，用于多用户 token 管理")
+    auth.add_argument("--token", help="COROS accessToken (覆盖 --user)")
     auth.add_argument("--email", help="COROS 账号")
     auth.add_argument("--password", help="COROS 密码")
 
@@ -469,8 +471,15 @@ def main():
     elif args.email and args.password:
         client.login(args.email, args.password)
     else:
-        print("错误: 需要 --token 或 --email + --password", file=sys.stderr)
-        sys.exit(1)
+        # Try multi-user token manager
+        try:
+            from coros_token_manager import get_valid_token
+            token = get_valid_token(region=args.region, user=args.user)
+            client.set_token(token)
+        except Exception as e:
+            print(f"错误: 需要 --token、--email + --password 或 --user\n{e}",
+                  file=sys.stderr)
+            sys.exit(1)
 
     # Fetch data
     print(f"正在获取{'本' if args.weeks_ago == 0 else '上'}周训练数据...",

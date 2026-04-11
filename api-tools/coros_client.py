@@ -131,6 +131,232 @@ RUNNING_TEMPLATES = {
     },
 }
 
+# Strength / HYROX exercise templates (from COROS library, 383 exercises)
+# Source: github.com/rowlando/coros-workout-mcp/data/exercises.json
+# Verified on CN API 2026-04-10
+#
+# COROS supports sportType=1200 (HYROX 混合体能比赛-单人, mode=50)
+# Templates work for both sportType=4 (strength) and sportType=1200 (HYROX)
+STRENGTH_TEMPLATES = {
+    # ── Warmup / Cooldown ──
+    "warmup": {
+        "name": "T1120", "originId": "425898928110747648",
+        "exerciseType": 1, "overview": "sid_strength_warm_up",
+        "targetType": 2,
+    },
+    "cooldown": {
+        "name": "T1122", "originId": "425898949585584128",
+        "exerciseType": 3, "overview": "sid_strength_cool_down",
+        "targetType": 2,
+    },
+    # ── HYROX Station Exercises (best available matches) ──
+    "indoor_rower": {  # SkiErg / Rowing station
+        "name": "T1207", "originId": "430536120548376576",
+        "exerciseType": 2, "overview": "sid_strength_indoor_rower",
+        "targetType": 2, "animationId": 245,
+        "muscle": [7], "part": [3, 5, 6], "equipment": [13],
+    },
+    "med_ball_push_press": {  # Wall Ball station (squat + overhead press with ball)
+        "name": "T1362", "originId": "469664544676036608",
+        "exerciseType": 2, "overview": "sid_strength_med_ball_push_press",
+        "targetType": 3, "animationId": 269,
+        "muscle": [7, 14], "part": [5], "equipment": [10],
+    },
+    "farmers_walk": {  # Farmers Carry station
+        "name": "T1310", "originId": "469656430677508096",
+        "exerciseType": 2, "overview": "sid_strength_farmers_walk",
+        "targetType": 2, "animationId": 365,
+        "muscle": [5, 13, 6], "part": [0], "equipment": [11, 2],
+    },
+    "walking_lunges": {  # Sandbag Lunge station
+        "name": "T1225", "originId": "469646772906672129",
+        "exerciseType": 2, "overview": "sid_strength_walking_lunges",
+        "targetType": 3, "animationId": 74,
+        "muscle": [7, 14], "part": [5], "equipment": [1],
+    },
+    "burpee": {  # Burpee Broad Jump station
+        "name": "T1007", "originId": "425827765602926593",
+        "exerciseType": 2, "overview": "sid_strength_burpees",
+        "targetType": 3, "animationId": 1,
+        "muscle": [7], "part": [0], "equipment": [1],
+    },
+    "ski_step": {  # SkiErg arm-pull pattern
+        "name": "T1174", "originId": "426939619892969472",
+        "exerciseType": 2, "overview": "sid_strength_ski_step",
+        "targetType": 3, "animationId": 26,
+        "muscle": [14], "part": [5], "equipment": [1],
+    },
+    # ── Lower Body ──
+    "box_squat": {
+        "name": "T1291", "originId": "469655274794434560",
+        "exerciseType": 2, "overview": "sid_strength_box_squat",
+        "targetType": 3, "animationId": 311,
+        "muscle": [7, 14], "part": [5], "equipment": [3],
+    },
+    "squat": {
+        "name": "T1061", "originId": "425832054396207105",
+        "exerciseType": 2, "overview": "sid_strength_squats",
+        "targetType": 2, "animationId": 37,
+        "muscle": [8], "part": [5], "equipment": [1],
+    },
+    "dumbbell_thruster": {  # Wall Ball alternative (squat + press)
+        "name": "T1314", "originId": "469656537514819584",
+        "exerciseType": 2, "overview": "sid_strength_dumbbell_thruster",
+        "targetType": 3, "animationId": 369,
+        "muscle": [7, 14], "part": [5], "equipment": [11, 2, 10],
+    },
+    "lunge": {
+        "name": "T1064", "originId": "425832124457861121",
+        "exerciseType": 2, "overview": "sid_strength_dumbbell_lunges",
+        "targetType": 3, "animationId": 345,
+        "muscle": [7, 14], "part": [5], "equipment": [2],
+    },
+    "reverse_lunge": {
+        "name": "T1226", "originId": "469646786060009472",
+        "exerciseType": 2, "overview": "sid_strength_reverse_lunge",
+        "targetType": 3, "animationId": 75,
+        "muscle": [14], "part": [5], "equipment": [1],
+    },
+    "jumping_lunge": {
+        "name": "T1136", "originId": "426617884429697024",
+        "exerciseType": 2, "overview": "sid_strength_jumping_lunges",
+        "targetType": 3, "animationId": 20,
+        "muscle": [7], "part": [5], "equipment": [1],
+    },
+    "split_squat": {
+        "name": "T1164", "originId": "426801647558246401",
+        "exerciseType": 2, "overview": "sid_strength_split_bench_squat",
+        "targetType": 3, "animationId": 54,
+        "muscle": [7], "part": [5], "equipment": [1],
+    },
+    "hip_thrust": {
+        "name": "T1289", "originId": "469655163238490112",
+        "exerciseType": 2, "overview": "sid_strength_hip_thrust",
+        "targetType": 3, "animationId": 309,
+        "muscle": [8], "part": [5], "equipment": [3],
+    },
+    "bridge": {
+        "name": "T1033", "originId": "425830845094477824",
+        "exerciseType": 2, "overview": "sid_strength_bridge",
+        "targetType": 2, "animationId": 56,
+        "muscle": [8], "part": [4, 5], "equipment": [9, 10],
+    },
+    "step_up": {
+        "name": "T1296", "originId": "469655367681245184",
+        "exerciseType": 2, "overview": "sid_strength_step_ups",
+        "targetType": 3, "animationId": 316,
+        "muscle": [7, 14, 8], "part": [5], "equipment": [1],
+    },
+    "nordic_hamstring_curl": {
+        "name": "T1365", "originId": "469664598899998720",
+        "exerciseType": 2, "overview": "sid_strength_nordic_hamstring_curl",
+        "targetType": 3, "animationId": 207,
+        "muscle": [8], "part": [5], "equipment": [16],
+    },
+    # ── Kettlebell ──
+    "kettlebell_swing": {
+        "name": "T1178", "originId": "427312999116750848",
+        "exerciseType": 2, "overview": "sid_strength_two_arm_kettlebell_swings",
+        "targetType": 3, "animationId": 275,
+        "muscle": [14], "part": [5], "equipment": [11],
+    },
+    "kettlebell_swing_1arm": {
+        "name": "T1177", "originId": "427312956167077888",
+        "exerciseType": 2, "overview": "sid_strength_one_arm_kettlebell_swings",
+        "targetType": 3, "animationId": 273,
+        "muscle": [14], "part": [5], "equipment": [11],
+    },
+    # ── Core ──
+    "plank": {
+        "name": "T1010", "originId": "425827856334110721",
+        "exerciseType": 2, "overview": "sid_strength_planks",
+        "targetType": 2, "animationId": 35,
+        "muscle": [6], "part": [4], "equipment": [1],
+    },
+    "bicycle_crunch": {
+        "name": "T1076", "originId": "425832906678779905",
+        "exerciseType": 2, "overview": "sid_strength_bicycle_crunches",
+        "targetType": 3, "animationId": 29,
+        "muscle": [6], "part": [4], "equipment": [1],
+    },
+    "mountain_climber": {
+        "name": "T1079", "originId": "425844786826756096",
+        "exerciseType": 2, "overview": "sid_strength_mountain_climbers",
+        "targetType": 2, "animationId": 12,
+        "muscle": [7], "part": [0], "equipment": [1],
+    },
+    "side_bridge": {
+        "name": "T1143", "originId": "426611709340467200",
+        "exerciseType": 2, "overview": "sid_other_side_bridge_wing_arm_and_swing_leg",
+        "targetType": 3, "animationId": 2,
+        "muscle": [6], "part": [0], "equipment": [1],
+    },
+    "dead_bug": {
+        "name": "T1243", "originId": "469647119867887616",
+        "exerciseType": 2, "overview": "sid_strength_dead_bug",
+        "targetType": 3, "animationId": 92,
+        "muscle": [6], "part": [4], "equipment": [1],
+    },
+    # ── Full Body / HIIT ──
+    "high_knees": {
+        "name": "T1013", "originId": "425828363677122561",
+        "exerciseType": 2, "overview": "sid_strength_high_knees",
+        "targetType": 2, "animationId": 47,
+        "muscle": [7], "part": [5], "equipment": [1],
+    },
+    "battle_rope": {
+        "name": "T1080", "originId": "425844786826756097",
+        "exerciseType": 2, "overview": "sid_strength_battle_ropes",
+        "targetType": 2, "animationId": 205,
+        "muscle": [3], "part": [6], "equipment": [16],
+    },
+    "battle_rope_slams": {
+        "name": "T1374", "originId": "469664761035014144",
+        "exerciseType": 2, "overview": "sid_strength_battle_rope_slams",
+        "targetType": 2, "animationId": 216,
+        "muscle": [1, 12], "part": [1, 3], "equipment": [16],
+    },
+    # ── Upper Body ──
+    "dumbbell_row": {
+        "name": "T1055", "originId": "425831875618193409",
+        "exerciseType": 2, "overview": "sid_strength_dumbbell_row",
+        "targetType": 3, "animationId": 333,
+        "muscle": [12], "part": [3, 6], "equipment": [2],
+    },
+    "shoulder_press": {
+        "name": "T1016", "originId": "425828813574946816",
+        "exerciseType": 2, "overview": "sid_strength_shoulder_dumbbell_press",
+        "targetType": 3, "animationId": 351,
+        "muscle": [1], "part": [1, 6], "equipment": [2],
+    },
+    "single_arm_farmers_walk": {
+        "name": "T1392", "originId": "469656277400862720",
+        "exerciseType": 2, "overview": "sid_strength_single_arm_overhead_farmers_walk",
+        "targetType": 2, "animationId": 278,
+        "muscle": [6, 1], "part": [0, 4, 1], "equipment": [2, 11],
+    },
+}
+
+# HYROX 8 stations → best COROS template mapping
+# For Sled Push/Pull there is NO native template; use mountain_climber / dumbbell_row
+HYROX_EXERCISE_MAP = {
+    # Station exercises
+    "skierg":          "indoor_rower",       # best match for SkiErg
+    "sled_push":       "mountain_climber",   # no native template — full-body push
+    "sled_pull":       "dumbbell_row",       # no native template — pulling pattern
+    "burpee_broad_jump": "burpee",
+    "rowing":          "indoor_rower",       # Indoor Rower template
+    "farmers_carry":   "farmers_walk",       # Farmer's Walk — perfect match
+    "sandbag_lunge":   "walking_lunges",     # Walking Lunges — very close
+    "wall_ball":       "med_ball_push_press", # Med Ball Push Press — excellent
+    # Training exercises
+    "box_squat":       "box_squat",          # Box Squat — perfect match
+    "kettlebell_swing": "kettlebell_swing",  # Two Arm KB Swings — perfect
+    "thruster":        "dumbbell_thruster",  # squat + press
+    "nordic_curl":     "nordic_hamstring_curl",
+    "pallof_press":    "side_bridge",        # anti-rotation core
+}
+
 # Sort number increment for segment ordering (2^24)
 SORT_NO_INCREMENT = 16777216
 
@@ -824,6 +1050,205 @@ class CorosClient:
             "duration": calculated.get("duration", 0),
             "training_load": calculated.get("trainingLoad", 0),
             "total_sets": calculated.get("totalSets", len(segments)),
+        }
+
+    # ── Strength Workout Builder ──────────────────────────────────
+
+    @staticmethod
+    def build_strength_segment(
+        template_key: str,
+        sets: int = 1,
+        target_type: int | None = None,
+        target_value: int = 0,
+        rest_sec: int = 0,
+        sort_index: int = 1,
+        display_name: str | None = None,
+        user_id: int = 0,
+        sport_type: int = 4,
+    ) -> dict:
+        """Build a single strength exercise segment payload.
+
+        Args:
+            template_key: Key in STRENGTH_TEMPLATES (e.g. 'squat', 'burpee').
+            sets: Number of sets.
+            target_type: 2=time(sec), 3=reps, 5=distance(cm). Auto-detected
+                from template if None.
+            target_value: Reps count, seconds, or distance in cm.
+            rest_sec: Rest between sets in seconds (0 = no rest).
+            sort_index: 1-based position for ordering.
+            display_name: Override display name (for HYROX-specific names).
+            user_id: COROS user ID (numeric).
+            sport_type: 4=strength, 1200=HYROX.
+
+        Returns:
+            Dict ready for the exercises[] array in strength workout payload.
+        """
+        tpl = STRENGTH_TEMPLATES[template_key]
+        if target_type is None:
+            target_type = tpl.get("targetType", 3)
+
+        segment = {
+            "exerciseType": tpl["exerciseType"],
+            "name": tpl["name"],
+            "originId": tpl["originId"],
+            "overview": tpl["overview"],
+            "sportType": sport_type,
+            "muscle": tpl.get("muscle", []),
+            "part": tpl.get("part", [0]),
+            "equipment": tpl.get("equipment", [1]),
+            "hrType": 3,
+            "intensityType": 1,
+            "intensityCustom": 0,
+            "intensityDisplayUnit": 1,
+            "intensityMultiplier": 0,
+            "intensityPercent": 0,
+            "intensityPercentExtend": 0,
+            "intensityValue": 0,
+            "intensityValueExtend": 0,
+            "isIntensityPercent": False,
+            "isDefaultAdd": 0,
+            "isGroup": False,
+            "targetType": target_type,
+            "targetValue": target_value,
+            "restType": 1 if rest_sec > 0 else 3,
+            "restValue": rest_sec,
+            "sets": sets,
+            "sortNo": sort_index * SORT_NO_INCREMENT,
+            "groupId": "0",
+            "access": 0,
+            "sourceId": "0",
+            "subType": 0,
+            "userId": user_id,
+            "createTimestamp": int(datetime.now().timestamp()),
+            "defaultOrder": sort_index,
+        }
+        if tpl.get("animationId"):
+            segment["animationId"] = tpl["animationId"]
+        if display_name:
+            segment["nameText"] = display_name
+        return segment
+
+    @staticmethod
+    def build_strength_workout_payload(
+        name: str,
+        overview: str,
+        segments: list[dict],
+        user_id: str = "0",
+        sport_type: int = 4,
+    ) -> dict:
+        """Assemble a complete strength workout payload.
+
+        Args:
+            name: Workout name (e.g. 'HYROX W2 专项力量').
+            overview: Short description.
+            segments: List of segment dicts from build_strength_segment().
+            user_id: COROS user ID string.
+            sport_type: 4=strength, 1200=HYROX.
+
+        Returns:
+            Complete payload dict for /training/program/add.
+        """
+        total_sets = sum(s.get("sets", 1) for s in segments)
+        exercise_num = len(segments)
+
+        return {
+            "sportType": sport_type,
+            "name": name,
+            "overview": overview,
+            "access": 1,
+            "type": 0,
+            "subType": 65535,
+            "status": 1,
+            "deleted": 0,
+            "simple": False,
+            "pbVersion": 2,
+            "userId": user_id,
+            "authorId": user_id,
+            "sourceId": "425868142590476288",
+            "sourceUrl": DEFAULT_SOURCE_URL,
+            "distanceDisplayUnit": 1,
+            "unit": 0,
+            "version": 0,
+            "poolLength": 2500,
+            "poolLengthId": 1,
+            "poolLengthUnit": 2,
+            "isTargetTypeConsistent": 0,
+            "targetType": 0,
+            "targetValue": 0,
+            "duration": 0,
+            "totalSets": total_sets,
+            "sets": total_sets,
+            "exerciseNum": exercise_num,
+            "exercises": segments,
+            "headPic": "",
+            "id": "0",
+            "idInPlan": "0",
+            "nickname": "",
+            "originEssence": 0,
+            "essence": 0,
+            "estimatedType": 0,
+            "estimatedValue": 0,
+            "profile": "",
+            "referExercise": {
+                "intensityType": 1,
+                "hrType": 0,
+                "valueType": 1,
+            },
+            "sex": 0,
+            "shareUrl": "",
+            "star": 0,
+            "thirdPartyId": 0,
+            "trainingLoad": 0,
+            "videoCoverUrl": "",
+            "videoUrl": "",
+            "fastIntensityTypeName": "",
+            "createTimestamp": 0,
+            "distance": 0,
+        }
+
+    def create_strength_workout(
+        self,
+        name: str,
+        overview: str,
+        segments: list[dict],
+        sport_type: int = 4,
+    ) -> dict:
+        """Create a strength workout: calculate metrics then save.
+
+        Args:
+            name: Workout name.
+            overview: Short description.
+            segments: Segment dicts from build_strength_segment().
+            sport_type: 4=strength, 1200=HYROX.
+
+        Returns:
+            Dict with program_id, duration, training_load, total_sets.
+        """
+        user_id = str(self.user_id or "0")
+        payload = self.build_strength_workout_payload(
+            name, overview, segments, user_id=user_id,
+            sport_type=sport_type,
+        )
+
+        calculated = self.calculate_program(payload)
+        payload["duration"] = calculated.get("planDuration",
+                                             calculated.get("duration", 0))
+        payload["totalSets"] = calculated.get("planSets",
+                                              calculated.get("totalSets",
+                                              sum(s.get("sets", 1) for s in segments)))
+        payload["trainingLoad"] = calculated.get("planTrainingLoad",
+                                                 calculated.get("trainingLoad", 0))
+        payload["sets"] = payload["totalSets"]
+
+        program_id = self.add_program(payload)
+
+        return {
+            "program_id": program_id,
+            "name": name,
+            "sport_type": sport_type,
+            "duration": payload["duration"],
+            "training_load": payload["trainingLoad"],
+            "total_sets": payload["totalSets"],
         }
 
     def query_programs(
