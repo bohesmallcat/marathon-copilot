@@ -100,6 +100,8 @@ SPORT_TYPE_MAP = {
     (100, 31): "健走",
     (101, 0): "室内跑",
     (102, 15): "越野跑",
+    (103, 20): "运动场跑步",
+    (103, 0): "运动场跑步",
     (104, 0): "徒步",
     (200, 0): "骑行",
     (201, 0): "室内骑行",
@@ -107,6 +109,9 @@ SPORT_TYPE_MAP = {
     (900, 31): "健走",
     (900, 0): "健走",
 }
+
+# Sport types that count as "running" for weekly summary statistics
+RUNNING_SPORT_TYPES = {100, 101, 103}
 
 # Running workout segment templates (verified by openclaw-coros-coach)
 # Used when creating structured running workouts via /training/program/add
@@ -805,8 +810,8 @@ class CorosClient:
             summary["total_duration_sec"] += total_time
             summary["total_training_load"] += training_load
 
-            # Count runs specifically (sportType 100=outdoor run, 101=indoor run)
-            if sport_type in (100, 101):
+            # Count runs specifically (outdoor, indoor, track running)
+            if sport_type in RUNNING_SPORT_TYPES:
                 summary["run_count"] += 1
                 summary["run_distance_km"] += activity_info["distance_km"]
                 summary["run_duration_sec"] += total_time
